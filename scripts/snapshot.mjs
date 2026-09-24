@@ -81,7 +81,8 @@ const SEEDS = ['', '-842225', 'commercial-industry', 'career', 'let-the-sun-pay-
 const LINK_RE = /href="(?:https:\/\/get\.maqosolar\.com)?\/([^"#?]*)"/g;
 const raw = new Map();
 
-const cleanSlug = (s) => decodeURI(s).replace(/\/$/, '');
+// Trailing spaces are trimmed: Windows can't create folders that end in one.
+const cleanSlug = (s) => decodeURI(s).replace(/\/$/, '').split('/').map((p) => p.trim()).join('/');
 
 async function crawl() {
   const queue = [...SEEDS];

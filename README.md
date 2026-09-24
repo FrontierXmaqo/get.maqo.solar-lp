@@ -54,3 +54,25 @@ This repository is maintained as a backup for MAQO Solar's GET landing page.
 
 **Original site:** `get.maqosolar.com`
 **Repository purpose:** Backup / Restoration
+
+## Snapshot
+
+The whole site is copied as static pages. `scripts/snapshot.mjs` crawls get.maqosolar.com from the home page and the main pages, follows every internal link, and saves each page as `<slug>/index.html`. Shared CSS, images and fonts go in `assets/`. That covers 88 pages: the main pages, contact and landing pages, the blog, its posts, and its category, author and tag pages. The residential page is `-842225/`.
+
+To regenerate them:
+
+```bash
+node scripts/snapshot.mjs
+```
+
+The script removes the GoHighLevel runtime and Google Tag Manager. `assets/js/restore.js` adds back what the page still needs: entrance animations, number counters, both mobile menu styles, image slider controls and the YouTube embeds.
+
+To preview locally:
+
+```bash
+npx http-server -p 8123 -c-1 .
+```
+
+Known gaps:
+- The forms are displayed but does not submit. They posted to GoHighLevel through the removed runtime.
+- All internal links are local. The exception is `/post/new-blog-post`, which also returns 404 on the live site.

@@ -107,6 +107,7 @@ Set these in Vercel → Project → Settings → Environment Variables. Webhook 
 | `CAREER_WEBHOOK_URL` | Career applications |
 | `TESTING_WEBHOOK_URL` | Receives every lead instead of the real webhooks while test mode is on (see below) |
 | `TURNSTILE_SECRET_KEY` | Turnstile secret. The check is skipped while it is unset. (The public site key is a constant in `assets/js/restore.js`.) |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | The landing page CMS Supabase project. Every real lead is also saved to `atap_leads` (residential) or `ci_leads` (C&I, BESS); those tables allow the anon role to insert only. Career applications have no table. |
 | `GTM_ID` | Google Tag Manager container, loaded by `/api/tags` |
 | `META_PIXEL_ID` | Meta pixel id. The loader never starts the pixel twice when the GTM container starts it too. |
 
@@ -117,3 +118,7 @@ To test without touching the CRM, open any page with `?test_webhook=1` (for exam
 ## Career page
 
 `career/` is currently a maintenance page (career applications are switched off). The original page is in git history: restore it with `git checkout bc84bde -- career/index.html`.
+
+## Lead storage
+
+`api/submit.js` sends the lead to the CRM webhook, then saves it to Supabase (`atap_leads` with `segment = 'residential'`, or `ci_leads`). `extra_fields` holds what the tables have no column for (site, form id, salutation, landing page, click ids, UTM values, `webhookOk`). If the webhook fails but the row is saved, the visitor is not asked to retry; find those rows with `extra_fields->>'webhookOk' = 'false'` and re-send them. Test-mode leads (`?test_webhook=1`) are never saved.

@@ -10,6 +10,9 @@
 //   TESTING_WEBHOOK_URL   every lead goes here instead when the browser has the
 //                         cookie test_webhook=1 (set by visiting ?test_webhook=1)
 //   TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret; checks are skipped when unset
+//   SUPABASE_URL          Supabase project URL. With SUPABASE_ANON_KEY, every real lead is
+//   SUPABASE_ANON_KEY     also saved to the landing page CMS tables (atap_leads, ci_leads).
+//                         Those tables let the anon role insert only; staff read them in the CMS.
 
 import forms from './_forms.json' with { type: 'json' };
 import { buildLeadWebhookPayload, buildCiLeadWebhookPayload, buildCareerWebhookPayload } from './_webhookTemplate.js';
@@ -214,6 +217,61 @@ function validate(form, submitted) {
   return values;
 }
 
+// Same categories the landing page CMS stores in lead_source (google / social / direct / other).
+function toLeadSource(sessionSource) {
+  if (sessionSource === 'Social media') return 'social';
+  if (sessionSource === 'Paid Search' || sessionSource === 'Organic Search') return 'google';
+  if (sessionSource === 'Direct traffic') return 'direct';
+  return 'other';
+}
+
+// The row for the CMS table that holds this kind of lead, or null when there is none
+// (career applications have no table). Empty text becomes null so nullable columns stay clean.
+function toLeadRow(kind, common, extra) {
+  const orNull = (v) => (v === '' || v === undefined ? null : v);
+  const extra_fields = Object.fromEntries(Object.entries(extra).filter(([, v]) => v !== '' && v !== undefined));
+  const base = {
+    full_name: common.fullName,
+    phone: common.phone,
+    email: orNull(common.email),
+    state: orNull(common.state),
+    lead_source: toLeadSource(common.sessionSource),
+    campaign_id: orNull(common.campaignId),
+    extra_fields,
+  };
+  if (kind === 'resi') {
+    return { table: 'atap_leads', row: { ...base, segment: 'residential', utm_source: orNull(common.utmSource), monthly_bill_range: orNull(extra.monthlyBillRange), property_type: orNull(extra.propertyType), electric_supply: orNull(extra.electricSupply), preferred_language: orNull(extra.preferredLanguage), extra_fields: { ...extra_fields, monthlyBillRange: undefined, propertyType: undefined, electricSupply: undefined, preferredLanguage: undefined } } };
+  }
+  if (kind === 'ci') {
+    return { table: 'ci_leads', row: { ...base, company_name: extra.companyName, industry: orNull(extra.industry), monthly_bill_range: orNull(extra.monthlyBillRange), role_in_organization: orNull(extra.roleInOrganization), extra_fields: { ...extra_fields, companyName: undefined, industry: undefined, monthlyBillRange: undefined, roleInOrganization: undefined } } };
+  }
+  return null;
+}
+
+// Saves the lead in Supabase (PostgREST insert as the anon role). Returns whether it was stored.
+async function saveLeadToSupabase(target) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!target || !url || !key) return false;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${url.replace(/\/$/, '')}/rest/v1/${target.table}`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify(target.row),
+      signal: controller.signal,
+    });
+    if (!res.ok) console.error(`Supabase insert into ${target.table} responded with`, res.status);
+    return res.ok;
+  } catch (err) {
+    console.error(`Supabase insert into ${target.table} failed`, err);
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function forwardToWebhook(envVar, payload) {
   const url = process.env[envVar];
   if (!url) {
@@ -353,9 +411,43 @@ export default async function handler(req, res) {
   const envVar = testMode ? 'TESTING_WEBHOOK_URL' : WEBHOOK_ENV[kind];
   console.log(`Lead (${kind}, ${body.formId}) -> ${envVar}`);
 
-  // No database behind this site, so a failed webhook is reported to the
-  // visitor so they can retry, rather than silently dropping the lead.
-  if (!(await forwardToWebhook(envVar, payload))) {
+  const webhookOk = await forwardToWebhook(envVar, payload);
+
+  // Real leads are also kept in the CMS database, so a failed webhook doesn't lose them.
+  // Test-mode leads stay out of it. extra_fields records what the CMS has no column for.
+  let saved = false;
+  if (!testMode) {
+    const target = toLeadRow(kind, common, {
+      site: 'get.maqosolar.com',
+      formId: body.formId,
+      salutation: common.salutation,
+      landingPage: common.attributionUrl || common.landingPageSource,
+      referrer: common.sourceOfLeads,
+      sessionSource: common.sessionSource,
+      gclid: common.gclid,
+      fbclid: common.fbclid,
+      utmMedium: common.utmMedium,
+      utmCampaign: common.utmCampaign,
+      utmTerm: common.utmTerm,
+      utmContent: common.utmContent,
+      country: common.country,
+      timezone: common.timezone,
+      webhookOk,
+      monthlyBillRange: kind === 'ci' ? [].concat(payload.customData['Monthly Electric Bill'] || '').join(', ') : payload.customData['Monthly TNB Bill'],
+      propertyType: payload['Property Type (Condo/Apartment not suitable)'],
+      electricSupply: payload['Electric Supply'],
+      preferredLanguage: payload['Preferred Communication Language 2'],
+      companyName: payload['Name of Company'],
+      industry: [].concat(payload['Industry'] || '').join(', '),
+      roleInOrganization: [].concat(payload['What is your role in this  organization?'] || '').join(', '),
+    });
+    saved = await saveLeadToSupabase(target);
+    console.log(`Lead (${kind}) webhook ${webhookOk ? 'ok' : 'FAILED'}, saved ${saved ? 'yes' : 'no'}`);
+  }
+
+  // A lead that reached the database is safe, so the visitor is not asked to retry
+  // (a retry would only create a duplicate). It can be re-sent from the table.
+  if (!webhookOk && !saved) {
     return res.status(502).json({ error: "We couldn't send your details. Please try again." });
   }
   return res.status(200).json({ ok: true });

@@ -106,9 +106,14 @@ Set these in Vercel → Project → Settings → Environment Variables. Webhook 
 | `CI_LEAD_WEBHOOK_URL` | C&I leads |
 | `CAREER_WEBHOOK_URL` | Career applications |
 | `TESTING_WEBHOOK_URL` | Receives every lead instead of the real webhooks while test mode is on (see below) |
-| `TURNSTILE_SITE_KEY` | Cloudflare Turnstile public key, served to the page by `/api/config` |
-| `TURNSTILE_SECRET_KEY` | Turnstile secret. The check is skipped while it is unset. |
+| `TURNSTILE_SECRET_KEY` | Turnstile secret. The check is skipped while it is unset. (The public site key is a constant in `assets/js/restore.js`.) |
+| `GTM_ID` | Google Tag Manager container, loaded by `/api/tags` |
+| `META_PIXEL_ID` | Meta pixel id. The loader never starts the pixel twice when the GTM container starts it too. |
 
 To test without touching the CRM, open any page with `?test_webhook=1` (for example `https://get.maqosolar.com/?test_webhook=1`) and submit a form. This sets a `test_webhook` cookie for that domain, and every lead type then goes to `TESTING_WEBHOOK_URL`. Open any page with `?test_webhook=0` to turn it off. Each submission logs which webhook it went to in the Vercel logs.
 
 `contact_source` is set per form type in `SOURCE_PAGE` in `api/submit.js`.
+
+## Career page
+
+`career/` is currently a maintenance page (career applications are switched off). The original page is in git history: restore it with `git checkout bc84bde -- career/index.html`.

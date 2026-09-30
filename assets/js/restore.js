@@ -162,91 +162,33 @@
   });
 })();
 
-// Tracking: Google Tag Manager and the Meta pixel load from the ids in /api/config
-// (GTM_ID, META_PIXEL_ID in Vercel). Nothing loads when they are unset.
-//
-// The pixel must never run twice. If the GTM container already starts the same pixel
-// (a Meta tag inside GTM), we leave it alone: after GTM has run its tags on window load
-// we check the pixel state and only init + PageView ourselves when it is missing.
-// Without GTM, or when GTM is blocked, we init straight away.
-//
-// "Lead" fires once per accepted form: on the page after the redirect (like the old
-// thank-you page header code) or straight away when the form shows its own message.
-// It carries the fbEventId that was sent to the CRM, so Meta can de-duplicate.
-window.__maqoConfig = fetch('/api/config').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
+// Tracking (Google Tag Manager, Meta pixel) is loaded by the /api/tags script, which holds
+// the ids in Vercel. It starts the pixel only when GTM has not, and reports "Lead" once:
+// on the page after the redirect (like the old thank-you page code), or straight away when
+// the form shows its own message.
 window.dataLayer = window.dataLayer || [];
 (function () {
   var PENDING = 'maqo_pending_lead';
-  var settle;
-  var pixelSettled = new Promise(function (resolve) { settle = resolve; });
-  var hasTracking = false;
+  var ready = new Promise(function (resolve) { window.__maqoTagsReady = resolve; });
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = '/api/tags';
+  s.onerror = function () { window.__maqoTagsReady({ trackLead: function () { return Promise.resolve(); } }); };
+  document.head.appendChild(s);
 
-  function pixelExists(id) {
-    try {
-      if (!window.fbq) return false;
-      if (window.fbq.getState) return window.fbq.getState().pixels.some(function (p) { return String(p.id) === id; });
-      if (window.fbq.queue) return window.fbq.queue.some(function (a) { return a[0] === 'init' && String(a[1]) === id; });
-    } catch (e) { /* treat as not started */ }
-    return false;
-  }
-  function loadPixelStub() {
-    /* Meta's standard loader; a no-op when fbq already exists */
-    !function (f, b, e, v, n, t, s) {
-      if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
-      if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
-      t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
-    }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-  }
-
-  window.__maqoConfig.then(function (cfg) {
-    hasTracking = !!(cfg.gtmId || cfg.metaPixelId);
-    var settled = false;
-    function startPixel() {
-      if (settled) return;
-      settled = true;
-      if (cfg.metaPixelId) {
-        loadPixelStub();
-        if (!pixelExists(cfg.metaPixelId)) { fbq('init', cfg.metaPixelId); fbq('track', 'PageView'); }
-      }
-      settle();
-    }
-
-    if (!cfg.gtmId) { startPixel(); return; }
-
-    window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
-    var g = document.createElement('script');
-    g.async = true;
-    g.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(cfg.gtmId);
-    g.onerror = startPixel; // blocked (ad blocker): no container, so the pixel is ours
-    document.head.appendChild(g);
-
-    // After the window has loaded and GTM has fired its tags, see whether it started the pixel.
-    function afterGtm() {
-      window.dataLayer.push({ event: 'maqo_gtm_settled', eventCallback: startPixel, eventTimeout: 2000 });
-      setTimeout(startPixel, 4000); // GTM never answered
-    }
-    if (document.readyState === 'complete') afterGtm(); else window.addEventListener('load', afterGtm);
-  });
-
-  // Fires the lead events once the pixel has been settled.
   window.__maqoTrackLead = function (formId, eventId) {
-    return pixelSettled.then(function () {
-      window.dataLayer.push({ event: 'generate_lead', form_id: formId, event_id: eventId });
-      if (window.fbq) fbq('track', 'Lead', {}, eventId ? { eventID: eventId } : undefined);
-    });
+    return ready.then(function (tags) { return tags.trackLead(formId, eventId); });
   };
   // A form that redirects leaves the lead for the next page to report, once.
   window.__maqoQueueLead = function (formId, eventId) {
     try { sessionStorage.setItem(PENDING, JSON.stringify({ formId: formId, eventId: eventId })); } catch (e) { /* lost if storage is blocked */ }
   };
-  window.__maqoConfig.then(function () {
-    var pending = null;
-    try {
-      pending = JSON.parse(sessionStorage.getItem(PENDING) || 'null');
-      sessionStorage.removeItem(PENDING);
-    } catch (e) { /* ignore */ }
-    if (pending) window.__maqoTrackLead(pending.formId, pending.eventId);
-  });
+  var pending = null;
+  try {
+    pending = JSON.parse(sessionStorage.getItem(PENDING) || 'null');
+    sessionStorage.removeItem(PENDING);
+  } catch (e) { /* ignore */ }
+  if (pending) window.__maqoTrackLead(pending.formId, pending.eventId);
 })();
 
 // Ad-campaign attribution, ported from the landingpage project's
@@ -389,18 +331,16 @@ var attribution = (function () {
     '.restore-thankyou{background:#fff;color:#000;border-radius:10px;padding:30px 20px;font-size:18px;text-align:center}';
   document.head.appendChild(style);
 
-  // Turnstile's public site key is served by /api/config so it lives in Vercel, not the repo.
-  var turnstile = window.__maqoConfig
-    .then(function (cfg) {
-      if (!cfg.turnstileSiteKey) return null;
-      return new Promise(function (resolve) {
-        window.__onTurnstile = function () { resolve({ api: window.turnstile, key: cfg.turnstileSiteKey }); };
-        var s = document.createElement('script');
-        s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__onTurnstile';
-        s.async = true;
-        document.head.appendChild(s);
-      });
-    });
+  // Cloudflare Turnstile. The site key is public by design (it ships in the page); the
+  // secret key stays in Vercel as TURNSTILE_SECRET_KEY and api/submit.js checks the token.
+  var TURNSTILE_SITE_KEY = '0x4AAAAAAFJwP8-9jS534EFE';
+  var turnstile = new Promise(function (resolve) {
+    window.__onTurnstile = function () { resolve({ api: window.turnstile, key: TURNSTILE_SITE_KEY }); };
+    var s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__onTurnstile';
+    s.async = true;
+    document.head.appendChild(s);
+  });
 
   function whenReady(test, fn, tries) {
     if (test()) return fn();

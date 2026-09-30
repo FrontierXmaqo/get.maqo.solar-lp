@@ -330,6 +330,10 @@ var attribution = (function () {
     '.restore-turnstile{display:flex;justify-content:center;margin:10px 0}' +
     '.iti--flag-fixed .iti__flag-container,.iti--flag-fixed .iti__flag-container:hover{cursor:default}' +
     '.iti--flag-fixed .iti__flag-container:hover .iti__selected-flag{background-color:transparent}' +
+    // Room for the flag and the "+60" beside it. The form stylesheet reserves only 45px (flag alone) with an
+    // #_builder-form !important rule, and the phone library rewrites inline padding as you type, so this
+    // has to be a stylesheet rule that outranks it.
+    '#_builder-form .iti.iti--flag-fixed input[type=tel]{padding-left:78px!important}' +
     '.restore-thankyou{background:#fff;color:#000;border-radius:10px;padding:30px 20px;font-size:18px;text-align:center}';
   document.head.appendChild(style);
 
@@ -559,7 +563,7 @@ var attribution = (function () {
             initialCountry: 'my',
             onlyCountries: ['my'], // Malaysia only: the flag is fixed and other codes are invalid
             allowDropdown: false,
-            separateDialCode: false,
+            separateDialCode: true, // shows "+60" beside the flag so it is clear the number is Malaysian
             autoPlaceholder: 'off',
             utilsScript: 'https://stcdn.leadconnectorhq.com/intl-tel-input/17.0.12/js/utils.min.js'
           });

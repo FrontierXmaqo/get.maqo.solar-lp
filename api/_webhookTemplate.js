@@ -176,17 +176,41 @@ function fillCommon(payload, input) {
   if (input.remarks) payload["Remarks"] = input.remarks;
 
   payload["location"] = { id: GHL_LOCATION_ID };
-  payload["attributionSource"] = {
-    url: input.landingPageSource,
-    referrer: input.sourceOfLeads,
-    campaign: input.utmCampaign,
-    utmSource: input.utmSource,
-    utmMedium: input.utmMedium,
-    utmCampaign: input.utmCampaign,
-    utmTerm: input.utmTerm,
-    utmContent: input.utmContent,
-    gclid: input.gclid,
-    fbclid: input.fbclid,
+  // Same shape as GoHighLevel's own attributionSource; keys it has no data for stay null.
+  const orNull = (v) => v || null;
+  const attribution = (url) => ({
+    adGroupId: null,
+    fbclid: orNull(input.fbclid),
+    utmTerm: orNull(input.utmTerm),
+    adName: null,
+    fbEventId: orNull(input.fbEventId),
+    utmKeyword: orNull(input.utmTerm),
+    fbp: orNull(input.fbp),
+    gaClientId: orNull(input.gaClientId),
+    medium: "form",
+    campaign: orNull(input.utmCampaign || input.campaignId),
+    fbc: orNull(input.fbc),
+    utmSource: orNull(input.utmSource),
+    gclid: orNull(input.gclid),
+    ip: orNull(input.ip),
+    utmMedium: orNull(input.utmMedium),
+    mediumId: null,
+    userAgent: orNull(input.userAgent),
+    utmMatchtype: orNull(input.utmMatchtype),
+    gaSessionId: null,
+    url: orNull(url || input.landingPageSource),
+    gbraid: orNull(input.gbraid),
+    referrer: orNull(input.sourceOfLeads),
+    utmContent: orNull(input.utmContent),
+    adId: null,
+    sessionSource: orNull(input.sessionSource),
+    wbraid: orNull(input.wbraid),
+    utmCampaign: orNull(input.utmCampaign),
+  });
+  payload["attributionSource"] = attribution(input.attributionUrl);
+  payload["contact"] = {
+    attributionSource: attribution(input.attributionUrl),
+    lastAttributionSource: { ...attribution(input.lastAttributionUrl), utmKeyword: null },
   };
 
   const customData = payload.customData;

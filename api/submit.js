@@ -147,6 +147,44 @@ function getLandingPageSource(req, reported) {
   return reportedUrl ? reportedUrl.origin + path : '';
 }
 
+// A page URL as the browser reports it, kept with its query string like
+// GoHighLevel's attribution url. Anything that isn't http(s) is dropped.
+function toPageUrl(raw, hash = '') {
+  try {
+    const u = new URL(clean(raw, 2000));
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
+    return u.origin + u.pathname + u.search + hash;
+  } catch {
+    return '';
+  }
+}
+
+// Keeps a cookie-style id only when it has the expected shape.
+function toId(raw, pattern) {
+  const v = clean(raw, 300);
+  return pattern.test(v) ? v : '';
+}
+
+const SOCIAL_HOSTS = /(^|\.)(facebook|instagram|threads|tiktok|twitter|x|linkedin|youtube|whatsapp|t)\.(com|co)$|^(fb|lnkd|wa)\.(me|in|com)$/;
+const SEARCH_HOSTS = /(^|\.)(google|bing|yahoo|duckduckgo|baidu|yandex|ecosia|syndicatedsearch)\.[a-z.]+$|^android-app:\/\/com\.google\.android\.googlequicksearchbox$/;
+
+// GoHighLevel's session source buckets, worked out from the click ids and referrer.
+function toSessionSource(a) {
+  if (a.gclid || a.gbraid || a.wbraid) return 'Paid Search';
+  const src = a.utmSource.toLowerCase();
+  if (['fb', 'facebook', 'ig', 'instagram', 'tiktok', 'threads'].includes(src) || a.fbclid) return 'Social media';
+  if (!a.referrer) return a.utmMedium ? 'Other' : 'Direct traffic';
+  let host = '';
+  try {
+    host = new URL(a.referrer).hostname.replace(/^(www|m|l|lm)\./, '');
+  } catch {
+    // opaque referrers such as android-app:// are matched as a whole below
+  }
+  if (SOCIAL_HOSTS.test(host)) return 'Social media';
+  if (SEARCH_HOSTS.test(host) || SEARCH_HOSTS.test(a.referrer)) return 'Organic Search';
+  return 'Referral';
+}
+
 function getClientIp(req) {
   const forwardedFor = req.headers['x-forwarded-for'];
   if (forwardedFor) return String(forwardedFor).split(',')[0].trim();
@@ -250,6 +288,26 @@ export default async function handler(req, res) {
     utmCampaign: clean(a.utmCampaign, 100),
     utmTerm: clean(a.utmTerm, 150),
     utmContent: clean(a.utmContent, 150),
+    utmMatchtype: clean(a.utmMatchtype, 50),
+    gbraid: clean(a.gbraid, 255),
+    wbraid: clean(a.wbraid, 255),
+    attributionUrl: toPageUrl(a.landingUrl),
+    lastAttributionUrl: toPageUrl(a.pageUrl, '#' + clean(body.formId, 40)),
+    fbc: toId(a.fbc, /^fb\.\d\.\d+\.[\w-]+$/),
+    fbp: toId(a.fbp, /^fb\.\d\.\d+\.\d+$/),
+    gaClientId: toId(a.gaClientId, /^GA\d\.\d\.\d+\.\d+$/),
+    fbEventId: toId(a.fbEventId, /^[0-9a-f-]{36}$/i),
+    ip: clientIp === 'unknown' ? '' : clientIp,
+    userAgent: clean(req.headers['user-agent'], 500),
+    sessionSource: toSessionSource({
+      gclid: clean(a.gclid, 255),
+      gbraid: clean(a.gbraid, 255),
+      wbraid: clean(a.wbraid, 255),
+      fbclid: clean(a.fbclid, 200),
+      utmSource: clean(a.utmSource, 100),
+      utmMedium: clean(a.utmMedium, 100),
+      referrer: clean(a.referrer, 500),
+    }),
     sourcePage: SOURCE_PAGE[kind],
     landingPageSource: getLandingPageSource(req, body.landingPageSource),
     salespartner: v[F.salespartner] || '',

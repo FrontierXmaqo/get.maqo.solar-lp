@@ -171,8 +171,8 @@ var attribution = (function () {
   var STORAGE_KEY = 'maqo_attribution';
   var TTL_COOKIE = 'maqo_attribution_ttl';
   var TTL_DAYS = 30;
-  var UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
-  var CLICK_IDS = ['gclid', 'fbclid'];
+  var UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_matchtype'];
+  var CLICK_IDS = ['gclid', 'fbclid', 'gbraid', 'wbraid'];
   var EXCLUDED_REFERRER_HOSTS = ['vercel.app', 'vercel.com'];
 
   // The referring site's origin (https://l.facebook.com, android-app://…), blank for direct traffic, our own domain or Vercel.
@@ -204,7 +204,7 @@ var attribution = (function () {
   }
   function fromUrl() {
     var params = new URLSearchParams(location.search);
-    var data = { referrer: externalReferrer(), captured_at: new Date().toISOString() };
+    var data = { referrer: externalReferrer(), captured_at: new Date().toISOString(), landing_url: location.origin + location.pathname + location.search };
     UTM.concat(CLICK_IDS).forEach(function (k) { data[k] = params.get(k) || ''; });
     return data;
   }
@@ -223,6 +223,21 @@ var attribution = (function () {
     }
   } catch (e) { /* tracking must never break the page */ }
 
+  function cookie(name) {
+    var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  // Meta's _fbc cookie when the pixel set one, else built from the fbclid the same way ("fb.1.<ms>.<fbclid>").
+  function fbc(a) {
+    if (cookie('_fbc')) return cookie('_fbc');
+    var ts = Date.parse(a.captured_at);
+    return a.fbclid && ts ? 'fb.1.' + ts + '.' + a.fbclid : '';
+  }
+  function uuid() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) { /* fall through */ }
+    return '';
+  }
+
   // What a form sends at submit time. campaign_id in the URL always wins.
   return function resolve() {
     var a = read() || fromUrl();
@@ -236,7 +251,16 @@ var attribution = (function () {
       utmMedium: a.utm_medium || '',
       utmCampaign: a.utm_campaign || '',
       utmTerm: a.utm_term || '',
-      utmContent: a.utm_content || ''
+      utmContent: a.utm_content || '',
+      utmMatchtype: a.utm_matchtype || '',
+      gbraid: a.gbraid || '',
+      wbraid: a.wbraid || '',
+      landingUrl: a.landing_url || location.origin + location.pathname + location.search,
+      pageUrl: location.origin + location.pathname + location.search,
+      fbc: fbc(a),
+      fbp: cookie('_fbp'),
+      gaClientId: cookie('_ga'),
+      fbEventId: uuid()
     };
   };
 })();

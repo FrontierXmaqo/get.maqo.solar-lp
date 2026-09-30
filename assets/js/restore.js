@@ -175,14 +175,15 @@ var attribution = (function () {
   var CLICK_IDS = ['gclid', 'fbclid'];
   var EXCLUDED_REFERRER_HOSTS = ['vercel.app', 'vercel.com'];
 
-  // The referring site's origin, blank for direct traffic, our own domain or Vercel.
+  // The referring site's origin (https://l.facebook.com, android-app://…), blank for direct traffic, our own domain or Vercel.
   function externalReferrer() {
     if (!document.referrer) return '';
     try {
       var url = new URL(document.referrer);
       if (url.hostname === location.hostname) return '';
       if (EXCLUDED_REFERRER_HOSTS.some(function (s) { return url.hostname === s || url.hostname.slice(-s.length - 1) === '.' + s; })) return '';
-      return url.origin;
+      // Non-http schemes (android-app://com.google.android.googlequicksearchbox) have an opaque origin of "null".
+      return url.origin !== 'null' ? url.origin : url.protocol + '//' + url.host;
     } catch (e) { return ''; }
   }
   function read() {

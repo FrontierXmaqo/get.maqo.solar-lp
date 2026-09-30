@@ -243,7 +243,7 @@ export default async function handler(req, res) {
     state: v[F.location] || '',
     sourceOfLeads: clean(a.referrer, 500),
     campaignId: clean(a.campaignId, 100),
-    gclid: clean(a.gclid, 100),
+    gclid: clean(a.gclid, 255),
     fbclid: clean(a.fbclid, 200),
     utmSource: clean(a.utmSource, 100),
     utmMedium: clean(a.utmMedium, 100),

@@ -77,7 +77,8 @@ async function rewriteCss(css, base, fromDir) {
 
 // The crawl starts here and follows every get.maqosolar.com link. Each page is
 // saved to <slug>/index.html. '-842225' is the residential page; nothing links to it.
-const SEEDS = ['', '-842225', 'commercial-industry', 'career', 'let-the-sun-pay-for-you-blog', 'solar-battery-energy-storage-system'];
+// The thank-you page is only reachable through a form redirect, so it is seeded too.
+const SEEDS = ['', '-842225', 'commercial-industry', 'career', 'let-the-sun-pay-for-you-blog', 'solar-battery-energy-storage-system', 'thank-you-page-let-the-sun-pay-for-you'];
 const LINK_RE = /href="(?:https:\/\/get\.maqosolar\.com)?\/([^"#?]*)"/g;
 const raw = new Map();
 
@@ -102,10 +103,93 @@ async function crawl() {
   }
 }
 
+// Decodes the page's __NUXT_DATA__ blob (devalue format: a flat array where
+// objects and arrays hold indices into it).
+function nuxtData(html) {
+  const m = html.match(/<script type="application\/json" data-nuxt-data="nuxt-app"[^>]*>([\s\S]*?)<\/script>/);
+  if (!m) return null;
+  const a = JSON.parse(m[1]);
+  const memo = new Map();
+  const WRAPPERS = ['Reactive', 'ShallowReactive', 'Ref', 'ShallowRef', 'EmptyRef', 'EmptyShallowRef'];
+  function rev(i) {
+    if (typeof i !== 'number' || i < 0) return undefined;
+    if (memo.has(i)) return memo.get(i);
+    const v = a[i];
+    if (Array.isArray(v)) {
+      if (WRAPPERS.includes(v[0])) { const r = rev(v[1]); memo.set(i, r); return r; }
+      if (typeof v[0] === 'string' && /^[A-Z]/.test(v[0]) && v.length <= 2) return null; // Date, Set, …
+      const out = [];
+      memo.set(i, out);
+      for (const x of v) out.push(rev(x));
+      return out;
+    }
+    if (v && typeof v === 'object') {
+      const o = {};
+      memo.set(i, o);
+      for (const k in v) o[k] = rev(v[k]);
+      return o;
+    }
+    return v;
+  }
+  return rev(0);
+}
+
+// Salutation options the live form is missing, added to every copy.
+const EXTRA_OPTIONS = { 'contact.salutation': ['Tun'] };
+
+// What restore.js needs to run each form: fields, options and the submit action.
+function formMeta(html, dir) {
+  const els = nuxtData(html)?.data?.pageData?.elements;
+  if (!els) return {};
+  const meta = {};
+  for (const el of Object.values(els)) {
+    const form = el?.formData?.form;
+    if (!form?.fields) continue;
+    const action = form.formAction || {};
+    let redirect = action.actionType === '1' ? action.redirectUrl || '' : '';
+    const own = redirect.match(/^https:\/\/get\.maqosolar\.com\/([^?#]*)/);
+    if (own && raw.has(cleanSlug(own[1]))) {
+      redirect = encodeURI((path.relative(dir, path.join(ROOT, cleanSlug(own[1]))).split(path.sep).join('/') || '.') + '/');
+    }
+    meta[el.id] = {
+      name: form.name || el.id,
+      redirect,
+      thankyou: action.thankyouText || '',
+      fields: form.fields.filter((f) => f.type !== 'submit').map((f) => {
+        const options = f.picklistOptions ? [...f.picklistOptions] : undefined;
+        for (const extra of EXTRA_OPTIONS[f.fieldKey] || []) if (options && !options.includes(extra)) options.push(extra);
+        return {
+          id: f.tag || f.id,
+          key: f.fieldKey || f.tag,
+          label: f.label,
+          type: f.type,
+          required: !!f.required,
+          hidden: !!f.hidden,
+          query: f.hiddenFieldQueryKey || '',
+          options,
+        };
+      }),
+    };
+  }
+  return meta;
+}
+
+// Every form on the site by element id; written to api/_forms.json so
+// api/submit.js can validate submissions against the real option lists.
+const allForms = {};
+
 async function snapshotPage(slug) {
   const url = SITE + slug;
   const dir = path.join(ROOT, slug);
   let html = raw.get(slug);
+
+  // Keep the form definitions before the Nuxt data is removed.
+  const forms = formMeta(html, dir);
+  Object.assign(allForms, forms);
+  if (Object.keys(forms).length) {
+    const json = JSON.stringify(forms).replace(/</g, '\\u003c');
+    html = html.replace('</body>', `<script type="application/json" id="form-meta">${json}</script></body>`);
+  }
 
   // Strip the Nuxt runtime, its state blob, module preloads and GTM.
   html = html
@@ -164,4 +248,5 @@ async function snapshotPage(slug) {
 await crawl();
 console.log(`${raw.size} pages found`);
 for (const slug of raw.keys()) await snapshotPage(slug);
-console.log(`${cache.size} assets`);
+await writeFile(path.join(ROOT, 'api', '_forms.json'), JSON.stringify(allForms, null, 2) + '\n');
+console.log(`${cache.size} assets, ${Object.keys(allForms).length} forms`);

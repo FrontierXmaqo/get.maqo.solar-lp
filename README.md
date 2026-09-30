@@ -65,14 +65,50 @@ To regenerate them:
 node scripts/snapshot.mjs
 ```
 
-The script removes the GoHighLevel runtime and Google Tag Manager. `assets/js/restore.js` adds back what the page still needs: entrance animations, number counters, both mobile menu styles, image slider controls and the YouTube embeds.
+The script removes the GoHighLevel runtime and Google Tag Manager. `assets/js/restore.js` adds back what the page still needs: entrance animations, number counters, both mobile menu styles, image slider controls, the YouTube embeds and the forms.
 
-To preview locally:
+To preview locally with the form functions, use the Vercel CLI:
 
 ```bash
-npx http-server -p 8123 -c-1 .
+npx vercel dev
 ```
 
 Known gaps:
-- The forms are displayed but does not submit. They posted to GoHighLevel through the removed runtime.
 - All internal links are local. The exception is `/post/new-blog-post`, which also returns 404 on the live site.
+
+## Forms
+
+`scripts/snapshot.mjs` saves each form's fields, dropdown options and submit action into the page as `#form-meta`. `assets/js/restore.js` uses it to rebuild the dropdowns, check required fields, and post submissions to `/api/submit`. After a successful submit, forms either show their thank-you message or go to the thank-you page, the same as on the live site.
+
+- Salutation also offers "Tun". Extra options are listed in `EXTRA_OPTIONS` in the snapshot script.
+- Hidden tracking fields (`salespartner`, `maqo`, `referer`, `campaign_id`) are filled from the page URL's query string.
+- The career form's résumé is sent as base64. Uploads are limited to 3 MB in total.
+
+`api/submit.js` runs on Vercel and follows the landingpage project's `submitLead` action:
+- **Checks:** a rate limit of 5 submissions per minute per IP, a hidden honeypot field, and Cloudflare Turnstile. Every dropdown value must be one of that form's real options (read from `api/_forms.json`, which the snapshot script writes).
+- **Payload:** GoHighLevel's contact JSON, built by `api/_webhookTemplate.js` from landingpage's `lib/leadWebhookTemplate.ts` template (the same 115 keys). Every key this site has data for is filled.
+- **Phone format:** phones are sent in WhatsApp digit format (`60123456789`).
+- **Attribution:** the first-touch UTM, `gclid`, `fbclid` and referrer are captured by `restore.js` (ported from landingpage's `lib/attribution.ts`) and kept for 30 days.
+
+Each form goes to its own webhook, with its own payload shape:
+
+| Form | Pages | Shape | Webhook |
+|---|---|---|---|
+| Residential | home, `-842225`, contact, residential landing, commercial-solar, BESS Malaysia, blog | `buildLeadWebhookPayload` | `LEAD_WEBHOOK_URL` |
+| C&I | commercial-industry, C&I landing, solar-battery-energy-storage-system | `buildCiLeadWebhookPayload` (Industry, Electric Bill and Role as arrays) | `CI_LEAD_WEBHOOK_URL` |
+| Career | career | Template's career keys, résumé as base64 in `Upload Resume` | `CAREER_WEBHOOK_URL` |
+
+Set these in Vercel → Project → Settings → Environment Variables. Webhook URLs must start with `https://`.
+
+| Variable | Purpose |
+|---|---|
+| `LEAD_WEBHOOK_URL` | Residential leads |
+| `CI_LEAD_WEBHOOK_URL` | C&I leads |
+| `CAREER_WEBHOOK_URL` | Career applications |
+| `TESTING_WEBHOOK_URL` | Receives every lead instead of the real webhooks while test mode is on (see below) |
+| `TURNSTILE_SITE_KEY` | Cloudflare Turnstile public key, served to the page by `/api/config` |
+| `TURNSTILE_SECRET_KEY` | Turnstile secret. The check is skipped while it is unset. |
+
+To test without touching the CRM, open any page with `?test_webhook=1` (for example `https://get.maqosolar.com/?test_webhook=1`) and submit a form. This sets a `test_webhook` cookie for that domain, and every lead type then goes to `TESTING_WEBHOOK_URL`. Open any page with `?test_webhook=0` to turn it off. Each submission logs which webhook it went to in the Vercel logs.
+
+`contact_source` is set per form type in `SOURCE_PAGE` in `api/submit.js`.

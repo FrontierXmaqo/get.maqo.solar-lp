@@ -555,6 +555,8 @@ var attribution = (function () {
         whenReady(function () { return window.intlTelInput; }, function () {
           iti = window.intlTelInput(el, {
             initialCountry: 'my',
+            onlyCountries: ['my'], // Malaysia only: the flag is fixed and other codes are invalid
+            allowDropdown: false,
             separateDialCode: false,
             autoPlaceholder: 'off',
             utilsScript: 'https://stcdn.leadconnectorhq.com/intl-tel-input/17.0.12/js/utils.min.js'

@@ -100,11 +100,12 @@ function clean(value, maxLength = MAX_FIELD_LENGTH) {
 
 // WhatsApp digit format ("60123456789"), as landingpage stores phones.
 // The browser sends E.164 from the country picker; a bare local number
-// ("012…") is taken as Malaysian.
+// ("012…") is taken as Malaysian. Anything that isn't a Malaysian number is dropped.
 function toLeadPhone(raw) {
   let digits = clean(raw, 30).replace(/\D/g, '');
   if (!clean(raw).startsWith('+') && digits.startsWith('0')) digits = '60' + digits.slice(1);
-  return digits.length >= 9 && digits.length <= 15 ? digits : '';
+  // Malaysian numbers only: 60 plus 8 to 10 digits. The form's phone picker is locked to Malaysia too.
+  return /^60\d{8,10}$/.test(digits) ? digits : '';
 }
 
 // ISO country of the phone number, from the picker ("MY"); Malaysia when the

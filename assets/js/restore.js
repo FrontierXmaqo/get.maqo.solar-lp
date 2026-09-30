@@ -333,7 +333,7 @@ var attribution = (function () {
     // Room for the flag and the "+60" beside it. The form stylesheet reserves only 45px (flag alone) with an
     // #_builder-form !important rule, and the phone library rewrites inline padding as you type, so this
     // has to be a stylesheet rule that outranks it.
-    '#_builder-form .iti.iti--flag-fixed input[type=tel]{padding-left:78px!important}' +
+    '#_builder-form .iti.iti--flag-fixed input[type=tel]{padding-left:72px!important}' +
     '.restore-thankyou{background:#fff;color:#000;border-radius:10px;padding:30px 20px;font-size:18px;text-align:center}';
   document.head.appendChild(style);
 
@@ -570,6 +570,18 @@ var attribution = (function () {
           // Without the dropdown the library skips this class, and the stylesheet then puts the
           // flag on the right. Adding it puts the flag back on the left, with room for it in the input.
           if (el.parentNode) el.parentNode.classList.add('iti--allow-dropdown', 'iti--flag-fixed');
+          // The "+60" would otherwise use the library's own 14px Roboto grey; match what is typed beside it.
+          var syncDial = function () {
+            var dial = el.parentNode && el.parentNode.querySelector('.iti__selected-dial-code');
+            if (!dial) return;
+            var cs = getComputedStyle(el);
+            dial.style.fontFamily = cs.fontFamily;
+            dial.style.fontSize = cs.fontSize;
+            dial.style.fontWeight = cs.fontWeight;
+            dial.style.color = cs.color;
+          };
+          syncDial();
+          window.addEventListener('load', syncDial);
         });
         // Only phone characters, and no more digits than the picked country's
         // numbers can have: its example mobile number in national format

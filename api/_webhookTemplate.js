@@ -176,13 +176,11 @@ function fillCommon(payload, input) {
   if (input.remarks) payload["Remarks"] = input.remarks;
 
   payload["location"] = { id: GHL_LOCATION_ID };
-  // Same shape as GoHighLevel's own attributionSource; keys it has no data for stay null.
+  // Same shape as GoHighLevel's own attributionSource; keys with no value stay null. Keys we can never fill (ad ids, mediumId, gaSessionId) are left out.
   const orNull = (v) => v || null;
   const attribution = (url) => ({
-    adGroupId: null,
     fbclid: orNull(input.fbclid),
     utmTerm: orNull(input.utmTerm),
-    adName: null,
     fbEventId: orNull(input.fbEventId),
     utmKeyword: orNull(input.utmTerm),
     fbp: orNull(input.fbp),
@@ -194,18 +192,14 @@ function fillCommon(payload, input) {
     gclid: orNull(input.gclid),
     ip: orNull(input.ip),
     utmMedium: orNull(input.utmMedium),
-    mediumId: null,
     userAgent: orNull(input.userAgent),
     utmMatchtype: orNull(input.utmMatchtype),
-    gaSessionId: null,
     url: orNull(url || input.landingPageSource),
     gbraid: orNull(input.gbraid),
     referrer: orNull(input.sourceOfLeads),
     utmContent: orNull(input.utmContent),
-    adId: null,
     sessionSource: orNull(input.sessionSource),
     wbraid: orNull(input.wbraid),
-    utmCampaign: orNull(input.utmCampaign),
   });
   payload["attributionSource"] = attribution(input.attributionUrl);
   payload["contact"] = {

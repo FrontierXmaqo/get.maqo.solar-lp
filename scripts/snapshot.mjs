@@ -212,6 +212,11 @@ async function snapshotPage(slug) {
     return m;
   });
 
+  // Tab icon: the Maqo sun icon (assets/img/favicon.png|ico) replaces whatever icon the live page links.
+  const iconDir = path.relative(dir, path.join(ROOT, 'assets/img')).split(path.sep).join('/');
+  html = html.replace(/<link[^>]*rel="(?:shortcut icon|icon)"[^>]*>/g, '')
+    .replace('</head>', `<link rel="icon" type="image/png" sizes="32x32" href="${iconDir}/favicon.png?v=2"><link rel="shortcut icon" href="${iconDir}/favicon.ico?v=2"></head>`);
+
   // Inline <style> blocks and style="" attributes.
   html = await replaceAsync(html, /(<style[^>]*>)([\s\S]*?)(<\/style>)/g, async (m, o, css, c) => o + await rewriteCss(css, url, dir) + c);
   html = await replaceAsync(html, /style="([^"]*url\([^"]*)"/g, async (m, css) =>

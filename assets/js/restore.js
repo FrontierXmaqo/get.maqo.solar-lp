@@ -327,7 +327,7 @@ var attribution = (function () {
     '.restore-error{color:#e93d3d;font-size:13px;margin-top:4px}' +
     '.restore-form-error{color:#e93d3d;font-size:14px;margin:10px 0;text-align:center}' +
     '.restore-honeypot{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden}' +
-    '.restore-turnstile{display:flex;justify-content:center;width:fit-content;max-width:100%;margin:10px auto;padding:4px;border-radius:8px;background:#fff}' +
+    '.restore-turnstile{display:flex;justify-content:center;margin:10px 0}' +
     '.restore-thankyou{background:#fff;color:#000;border-radius:10px;padding:30px 20px;font-size:18px;text-align:center}';
   document.head.appendChild(style);
 

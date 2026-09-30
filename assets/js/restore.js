@@ -328,6 +328,8 @@ var attribution = (function () {
     '.restore-form-error{color:#e93d3d;font-size:14px;margin:10px 0;text-align:center}' +
     '.restore-honeypot{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden}' +
     '.restore-turnstile{display:flex;justify-content:center;margin:10px 0}' +
+    '.iti--flag-fixed .iti__flag-container,.iti--flag-fixed .iti__flag-container:hover{cursor:default}' +
+    '.iti--flag-fixed .iti__flag-container:hover .iti__selected-flag{background-color:transparent}' +
     '.restore-thankyou{background:#fff;color:#000;border-radius:10px;padding:30px 20px;font-size:18px;text-align:center}';
   document.head.appendChild(style);
 
@@ -561,6 +563,9 @@ var attribution = (function () {
             autoPlaceholder: 'off',
             utilsScript: 'https://stcdn.leadconnectorhq.com/intl-tel-input/17.0.12/js/utils.min.js'
           });
+          // Without the dropdown the library skips this class, and the stylesheet then puts the
+          // flag on the right. Adding it puts the flag back on the left, with room for it in the input.
+          if (el.parentNode) el.parentNode.classList.add('iti--allow-dropdown', 'iti--flag-fixed');
         });
         // Only phone characters, and no more digits than the picked country's
         // numbers can have: its example mobile number in national format
@@ -588,7 +593,7 @@ var attribution = (function () {
         });
         getters[field.id] = function () { return el.value.trim() ? (iti ? iti.getNumber() : el.value.trim()) : ''; };
         getters[field.id].country = function () { return iti ? iti.getSelectedCountryData().iso2 || '' : ''; };
-        getters[field.id].valid = function () { return !iti || !window.intlTelInputUtils || iti.isValidNumber(); };
+        getters[field.id].valid = function () { return !iti || !window.intlTelInputUtils || (iti.isValidNumber() && /^\+60/.test(iti.getNumber())); }; // Malaysian numbers only
       } else {
         getters[field.id] = function () { return el.value.trim(); };
       }

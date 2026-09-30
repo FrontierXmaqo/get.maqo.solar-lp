@@ -164,34 +164,90 @@
 
 // Tracking: Google Tag Manager and the Meta pixel load from the ids in /api/config
 // (GTM_ID, META_PIXEL_ID in Vercel). Nothing loads when they are unset.
+//
+// The pixel must never run twice. If the GTM container already starts the same pixel
+// (a Meta tag inside GTM), we leave it alone: after GTM has run its tags on window load
+// we check the pixel state and only init + PageView ourselves when it is missing.
+// Without GTM, or when GTM is blocked, we init straight away.
+//
+// "Lead" fires once per accepted form: on the page after the redirect (like the old
+// thank-you page header code) or straight away when the form shows its own message.
+// It carries the fbEventId that was sent to the CRM, so Meta can de-duplicate.
 window.__maqoConfig = fetch('/api/config').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
 window.dataLayer = window.dataLayer || [];
-window.__maqoTrackLead = function () {};
-window.__maqoConfig.then(function (cfg) {
-  if (cfg.gtmId) {
-    window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
-    var g = document.createElement('script');
-    g.async = true;
-    g.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(cfg.gtmId);
-    document.head.appendChild(g);
+(function () {
+  var PENDING = 'maqo_pending_lead';
+  var settle;
+  var pixelSettled = new Promise(function (resolve) { settle = resolve; });
+  var hasTracking = false;
+
+  function pixelExists(id) {
+    try {
+      if (!window.fbq) return false;
+      if (window.fbq.getState) return window.fbq.getState().pixels.some(function (p) { return String(p.id) === id; });
+      if (window.fbq.queue) return window.fbq.queue.some(function (a) { return a[0] === 'init' && String(a[1]) === id; });
+    } catch (e) { /* treat as not started */ }
+    return false;
   }
-  if (cfg.metaPixelId) {
-    /* Meta's standard loader */
+  function loadPixelStub() {
+    /* Meta's standard loader; a no-op when fbq already exists */
     !function (f, b, e, v, n, t, s) {
       if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
       if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
       t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
     }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', cfg.metaPixelId);
-    fbq('track', 'PageView');
   }
-  // Called after a lead is accepted. eventId is the same fbEventId sent to the CRM, so Meta can de-duplicate.
+
+  window.__maqoConfig.then(function (cfg) {
+    hasTracking = !!(cfg.gtmId || cfg.metaPixelId);
+    var settled = false;
+    function startPixel() {
+      if (settled) return;
+      settled = true;
+      if (cfg.metaPixelId) {
+        loadPixelStub();
+        if (!pixelExists(cfg.metaPixelId)) { fbq('init', cfg.metaPixelId); fbq('track', 'PageView'); }
+      }
+      settle();
+    }
+
+    if (!cfg.gtmId) { startPixel(); return; }
+
+    window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+    var g = document.createElement('script');
+    g.async = true;
+    g.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(cfg.gtmId);
+    g.onerror = startPixel; // blocked (ad blocker): no container, so the pixel is ours
+    document.head.appendChild(g);
+
+    // After the window has loaded and GTM has fired its tags, see whether it started the pixel.
+    function afterGtm() {
+      window.dataLayer.push({ event: 'maqo_gtm_settled', eventCallback: startPixel, eventTimeout: 2000 });
+      setTimeout(startPixel, 4000); // GTM never answered
+    }
+    if (document.readyState === 'complete') afterGtm(); else window.addEventListener('load', afterGtm);
+  });
+
+  // Fires the lead events once the pixel has been settled.
   window.__maqoTrackLead = function (formId, eventId) {
-    window.dataLayer.push({ event: 'generate_lead', form_id: formId, event_id: eventId });
-    if (window.fbq) fbq('track', 'Lead', {}, eventId ? { eventID: eventId } : undefined);
-    return !!(cfg.gtmId || cfg.metaPixelId);
+    return pixelSettled.then(function () {
+      window.dataLayer.push({ event: 'generate_lead', form_id: formId, event_id: eventId });
+      if (window.fbq) fbq('track', 'Lead', {}, eventId ? { eventID: eventId } : undefined);
+    });
   };
-});
+  // A form that redirects leaves the lead for the next page to report, once.
+  window.__maqoQueueLead = function (formId, eventId) {
+    try { sessionStorage.setItem(PENDING, JSON.stringify({ formId: formId, eventId: eventId })); } catch (e) { /* lost if storage is blocked */ }
+  };
+  window.__maqoConfig.then(function () {
+    var pending = null;
+    try {
+      pending = JSON.parse(sessionStorage.getItem(PENDING) || 'null');
+      sessionStorage.removeItem(PENDING);
+    } catch (e) { /* ignore */ }
+    if (pending) window.__maqoTrackLead(pending.formId, pending.eventId);
+  });
+})();
 
 // Ad-campaign attribution, ported from the landingpage project's
 // lib/attribution.ts. UTM params and click ids only exist on the page an ad
@@ -700,9 +756,12 @@ var attribution = (function () {
             throw new Error(out.error || '');
           });
         }
-        var tracked = window.__maqoTrackLead(root.id, attr.fbEventId);
-        // A short pause lets the tracking requests leave before the page changes.
-        if (meta.redirect) { setTimeout(function () { location.href = meta.redirect; }, tracked ? 300 : 0); return; }
+        if (meta.redirect) {
+          window.__maqoQueueLead(root.id, attr.fbEventId);
+          location.href = meta.redirect;
+          return;
+        }
+        window.__maqoTrackLead(root.id, attr.fbEventId);
         var wrap = root.querySelector('.ghl-form-wrap') || root;
         var thanks = document.createElement('div');
         thanks.className = 'restore-thankyou';

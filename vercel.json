@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "routes": [
+    {
+      "src": "/((?!api/|philippines/).*)",
+      "has": [{ "type": "host", "value": { "pre": "maqo-philippines", "suf": ".vercel.app" } }],
+      "dest": "/philippines/$1"
+    }
+  ]
+}

@@ -18,6 +18,7 @@
 // Philippine leads are not saved to the Malaysia site's Supabase tables.
 
 import forms from './_ph-forms.json' with { type: 'json' };
+import { randomInt } from 'node:crypto';
 import { buildCiLeadWebhookPayload } from './_webhookTemplate.js';
 
 // Sent as contact_source.
@@ -298,22 +299,23 @@ export default async function handler(req, res) {
   // A "test_webhook" cookie (set by visiting any page with ?test_webhook=1)
   // sends the CRM lead to TESTING_WEBHOOK_URL instead; Lark still gets it, marked as a test.
   const testMode = getCookie(req, 'test_webhook') === '1';
+  const leadId = newLeadId();
   const sends = [];
   const crmEnv = testMode ? 'TESTING_WEBHOOK_URL' : 'PH_LEAD_WEBHOOK_URL';
   if (process.env[crmEnv]) sends.push(forwardToWebhook(crmEnv, payload));
   if (process.env.LARK_WEBHOOK_URL) {
     sends.push(forwardToWebhook('LARK_WEBHOOK_URL', toLarkRecord({
-      payload, form, siteLocation, details, testMode,
+      payload, form, siteLocation, details, testMode, leadId,
       bizpartner: v[F.bizpartner] || '',
       sessionSource: payload.attributionSource.sessionSource || '',
     })));
   }
   if (!sends.length) {
-    console.error(`Lead (ph, ${body.formId}) not sent: neither ${crmEnv} nor LARK_WEBHOOK_URL is set.`);
+    console.error(`Lead ${leadId} (ph, ${body.formId}) not sent: neither ${crmEnv} nor LARK_WEBHOOK_URL is set.`);
     return res.status(502).json({ error: "We couldn't send your details. Please try again." });
   }
   const results = await Promise.all(sends);
-  console.log(`Lead (ph, ${body.formId}) -> ${[process.env[crmEnv] && crmEnv, process.env.LARK_WEBHOOK_URL && 'LARK_WEBHOOK_URL'].filter(Boolean).join(' + ')}: ${results.map((ok) => (ok ? 'ok' : 'FAILED')).join(', ')}`);
+  console.log(`Lead ${leadId} (ph, ${body.formId}) -> ${[process.env[crmEnv] && crmEnv, process.env.LARK_WEBHOOK_URL && 'LARK_WEBHOOK_URL'].filter(Boolean).join(' + ')}: ${results.map((ok) => (ok ? 'ok' : 'FAILED')).join(', ')}`);
 
   // One destination that took the lead is enough; a retry would only duplicate it there.
   if (!results.some(Boolean)) {
@@ -322,13 +324,24 @@ export default async function handler(req, res) {
   return res.status(200).json({ ok: true });
 }
 
+// Date in Philippine time plus 4 random characters, e.g. "PH-20261001-7F3K". The letters
+// leave out 0/O and 1/I/L so the id can be read out over the phone.
+const ID_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+function newLeadId() {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()).replace(/-/g, '');
+  let code = '';
+  for (let i = 0; i < 4; i++) code += ID_CHARS[randomInt(ID_CHARS.length)];
+  return `PH-${day}-${code}`;
+}
+
 // The flat record sent to the Lark Base workflow ("When a webhook is received" → "Add record"):
 // one key per table column, all plain text, so each maps straight onto a column.
-function toLarkRecord({ payload, form, siteLocation, details, bizpartner, sessionSource, testMode }) {
+function toLarkRecord({ payload, form, siteLocation, details, bizpartner, sessionSource, testMode, leadId }) {
   const submittedAt = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
   }).format(new Date()).replace(',', '');
   return {
+    lead_id: leadId,
     name: payload.full_name,
     company: payload['Name of Company'],
     phone: payload.phone ? '+' + payload.phone : '',

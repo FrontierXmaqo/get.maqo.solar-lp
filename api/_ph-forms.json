@@ -1,0 +1,178 @@
+{
+  "form-XF9avFfnAO": {
+    "name": "English - Phillipine Full CI Form",
+    "redirect": "https://phil.maqo.asia/thank-you-page",
+    "thankyou": "Thank you for taking the time to complete this form.",
+    "fields": [
+      {
+        "id": "full_name",
+        "key": "name",
+        "label": "Name",
+        "type": "text",
+        "required": true,
+        "hidden": false,
+        "query": "full_name"
+      },
+      {
+        "id": "vPXFJP5D02F99FyuQeyq",
+        "key": "contact.name_of_company",
+        "label": "Name of Company",
+        "type": "text",
+        "required": true,
+        "hidden": false,
+        "query": "name_of_company"
+      },
+      {
+        "id": "phone",
+        "key": "phone_number",
+        "label": "Phone Number",
+        "type": "text",
+        "required": true,
+        "hidden": false,
+        "query": "phone"
+      },
+      {
+        "id": "BHVAa4Nzg0oXDtd4LNFH",
+        "key": "contact.site_location",
+        "label": "Site Location",
+        "type": "text",
+        "required": true,
+        "hidden": false,
+        "query": "site_location"
+      },
+      {
+        "id": "email",
+        "key": "email",
+        "label": "Email",
+        "type": "email",
+        "required": true,
+        "hidden": false,
+        "query": "email"
+      },
+      {
+        "id": "XofuwE6yYXeTMt1NqP7G",
+        "key": "contact.details",
+        "label": "Details",
+        "type": "large_text",
+        "required": false,
+        "hidden": false,
+        "query": "details"
+      },
+      {
+        "id": "WI4mKAjX45RWNmgkndBD",
+        "key": "contact.salespartner",
+        "label": "salespartner",
+        "type": "text",
+        "required": false,
+        "hidden": true,
+        "query": "salespartner"
+      },
+      {
+        "id": "nnrTLGESGUwIl9RKRY9o",
+        "key": "contact.bizpartner",
+        "label": "bizpartner",
+        "type": "text",
+        "required": false,
+        "hidden": true,
+        "query": "bizpartner"
+      },
+      {
+        "id": "1RB2AqI58o9oUEV6TGAu",
+        "key": "contact.maqo",
+        "label": "MAQO",
+        "type": "text",
+        "required": false,
+        "hidden": true,
+        "query": "maqo"
+      }
+    ]
+  },
+  "form-IBEzFK0TnU": {
+    "name": "Co-investment partner, EPC, Landowners Form",
+    "redirect": "https://phil.maqo.asia/thank-you-page",
+    "thankyou": "Thank you for taking the time to complete this form.",
+    "fields": [
+      {
+        "id": "full_name",
+        "key": "full_name",
+        "label": "Full Name",
+        "type": "text",
+        "required": true,
+        "hidden": false,
+        "query": "full_name"
+      },
+      {
+        "id": "vPXFJP5D02F99FyuQeyq",
+        "key": "contact.name_of_company",
+        "label": "Name of Company",
+        "type": "text",
+        "required": true,
+        "hidden": false,
+        "query": "name_of_company"
+      },
+      {
+        "id": "phone",
+        "key": "phone_number",
+        "label": "Phone Number",
+        "type": "text",
+        "required": true,
+        "hidden": false,
+        "query": "phone"
+      },
+      {
+        "id": "email",
+        "key": "email",
+        "label": "Email",
+        "type": "email",
+        "required": true,
+        "hidden": false,
+        "query": "email"
+      },
+      {
+        "id": "BHVAa4Nzg0oXDtd4LNFH",
+        "key": "contact.site_location",
+        "label": "Location",
+        "type": "text",
+        "required": true,
+        "hidden": false,
+        "query": "site_location"
+      },
+      {
+        "id": "XofuwE6yYXeTMt1NqP7G",
+        "key": "contact.details",
+        "label": "Details",
+        "type": "large_text",
+        "required": false,
+        "hidden": false,
+        "query": "details"
+      },
+      {
+        "id": "WI4mKAjX45RWNmgkndBD",
+        "key": "contact.salespartner",
+        "label": "salespartner",
+        "type": "text",
+        "required": false,
+        "hidden": true,
+        "query": "salespartner"
+      },
+      {
+        "id": "nnrTLGESGUwIl9RKRY9o",
+        "key": "contact.bizpartner",
+        "label": "bizpartner",
+        "type": "text",
+        "required": false,
+        "hidden": true,
+        "query": "bizpartner"
+      },
+      {
+        "id": "1RB2AqI58o9oUEV6TGAu",
+        "key": "contact.maqo",
+        "label": "MAQO",
+        "type": "text",
+        "required": false,
+        "hidden": true,
+        "query": "maqo"
+      }
+    ]
+  }
+}

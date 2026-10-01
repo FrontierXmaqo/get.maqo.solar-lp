@@ -228,22 +228,8 @@ var attribution = (function () {
     '.restore-error{color:#e93d3d;font-size:13px;margin-top:4px}' +
     '.restore-form-error{color:#e93d3d;font-size:14px;margin:10px 0;text-align:center}' +
     '.restore-honeypot{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden}' +
-    '.restore-turnstile{display:flex;justify-content:center}' +
-    '.restore-turnstile iframe{margin:10px 0}' +
     '.restore-thankyou{background:#fff;color:#000;border-radius:10px;padding:30px 20px;font-size:18px;text-align:center}';
   document.head.appendChild(style);
-
-  // Cloudflare Turnstile, the Malaysia site's key. GoHighLevel's own forms run an invisible
-  // check, so this one only shows itself when Cloudflare needs the visitor to click. The site
-  // key is public by design; the secret key stays in Vercel as TURNSTILE_SECRET_KEY.
-  var TURNSTILE_SITE_KEY = '0x4AAAAAAFJwP8-9jS534EFE';
-  var turnstile = new Promise(function (resolve) {
-    window.__onTurnstile = function () { resolve({ api: window.turnstile, key: TURNSTILE_SITE_KEY }); };
-    var s = document.createElement('script');
-    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__onTurnstile';
-    s.async = true;
-    document.head.appendChild(s);
-  });
 
   function whenReady(test, fn, tries) {
     if (test()) return fn();
@@ -511,24 +497,6 @@ var attribution = (function () {
     formError.style.display = 'none';
     submitBox.parentNode.insertBefore(formError, submitBox);
 
-    var widget = null, token = '';
-    turnstile.then(function (ts) {
-      if (!ts) return;
-      var box = document.createElement('div');
-      box.className = 'restore-turnstile';
-      submitBox.parentNode.insertBefore(box, submitBox);
-      widget = {
-        api: ts.api,
-        id: ts.api.render(box, {
-          sitekey: ts.key,
-          theme: 'light', // 'auto' would turn the widget dark on dark-mode devices
-          appearance: 'interaction-only',
-          callback: function (t) { token = t; },
-          'expired-callback': function () { token = ''; }
-        })
-      };
-    });
-
     function fail(message) {
       formError.textContent = message;
       formError.style.display = '';
@@ -561,7 +529,6 @@ var attribution = (function () {
       });
 
       if (firstBad) { firstBad.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
-      if (widget && !token) return fail('Please complete the verification check.');
 
       button.disabled = true;
       if (loader) {
@@ -588,7 +555,6 @@ var attribution = (function () {
             timezone: (function () {
               try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; }
             })(),
-            token: token,
             website: honeypot.value
           })
         });
@@ -611,7 +577,6 @@ var attribution = (function () {
         wrap.appendChild(thanks);
       }).catch(function (err) {
         fail(err.message || "We couldn't send your details. Please try again.");
-        if (widget) { widget.api.reset(widget.id); token = ''; }
       }).then(function () {
         button.disabled = false;
         if (loader) loader.style.display = 'none';

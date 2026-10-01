@@ -244,7 +244,8 @@ const decode = (s) => s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/
 // A page saved from a browser points at its "<name>_files/" folder, which isn't needed: this puts back
 // the URLs GoHighLevel's server sends. Images come from their <picture> sources or the blog data.
 function fromSaved(html, data) {
-  const fonts = [...new Set(JSON.stringify(data).match(/https:\/\/fonts\.googleapis\.com\/css[^"\\ ]*/g) || [])];
+  const dataText = JSON.stringify(data);
+  const fonts = [...new Set(dataText.match(/https:\/\/fonts\.googleapis\.com\/css[^"\\ ]*/g) || [])];
   let fontsPlaced = false;
   const body = html.indexOf('<body');
   const app = html.indexOf('<div id="__nuxt"');
@@ -280,8 +281,13 @@ function fromSaved(html, data) {
     if (!m) return tag;
     const alt = decode((tag.match(/\salt="([^"]*)"/) || [, ''])[1]).trim();
     const post = posts.find((p) => String(p.title).trim() === alt && p.imageUrl);
-    if (!post) { console.warn('no original found for image', alt || m[0]); return tag; }
-    return tag.replace(m[0], ` src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_${post.imageUrl}"`);
+    if (post) return tag.replace(m[0], ` src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_${post.imageUrl}"`);
+    // Images inside a blog post keep their media file name; the post's HTML in the page data has the full URL.
+    const name = decodeURIComponent(m[0].match(/_files\/([^"]+)"/)[1]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const original = dataText.match(new RegExp(`https://[^"\\\\\\s]*/${name}`));
+    if (original) return tag.replace(m[0], ` src="${original[0]}"`);
+    console.warn('no original found for image', alt || m[0]);
+    return tag;
   });
   return html;
 }
@@ -381,6 +387,8 @@ async function snapshotPage(slug) {
   // Stylesheets.
   html = await replaceAsync(html, /<link([^>]*?)href="(https?:[^"]+)"([^>]*)>/g, async (m, a, href, b) => {
     if (!/rel="stylesheet"/.test(a + b) && !/as="style"/.test(a + b)) return m;
+    // An empty stylesheet link that the browser saved as the page's own URL.
+    if (href.startsWith(SITE)) return '';
     return `<link${a}href="${await localize(new URL(href.replace(/&amp;/g, '&'), url).href, 'css', dir)}"${b}>`;
   });
 

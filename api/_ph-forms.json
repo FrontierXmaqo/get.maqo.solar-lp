@@ -1,7 +1,7 @@
 {
   "form-XF9avFfnAO": {
     "name": "English - Phillipine Full CI Form",
-    "redirect": "https://phil.maqo.asia/thank-you-page",
+    "redirect": "thank-you-page/",
     "thankyou": "Thank you for taking the time to complete this form.",
     "fields": [
       {
@@ -89,7 +89,7 @@
   },
   "form-IBEzFK0TnU": {
     "name": "Co-investment partner, EPC, Landowners Form",
-    "redirect": "https://phil.maqo.asia/thank-you-page",
+    "redirect": "thank-you-page/",
     "thankyou": "Thank you for taking the time to complete this form.",
     "fields": [
       {

@@ -8,7 +8,7 @@
 // Environment variables:
 //   PH_LEAD_WEBHOOK_URL   leads from both Philippines forms (FREE Consultation, and
 //                         Co-Investors, EPCs & Landowners)
-//   LARK_PARTNER_WEBHOOK_URL  Lark workflow for the Co-Investors, EPCs & Landowners form
+//   LARK_COLLAB_WEBHOOK_URL   Lark workflow for the Co-Investors, EPCs & Landowners form
 //                         (form-IBEzFK0TnU), so its leads land in their own table; that
 //                         form uses LARK_WEBHOOK_URL while this is unset
 //   LARK_WEBHOOK_URL      Lark Base workflow webhook ("When a webhook is received"); gets
@@ -28,7 +28,7 @@ import { buildCiLeadWebhookPayload } from './_webhookTemplate.js';
 const SOURCE_PAGE = 'MAQO Philippines Website';
 
 // The Co-Investors, EPCs & Landowners form, which can have its own Lark table.
-const PARTNER_FORMS = ['form-IBEzFK0TnU'];
+const COLLAB_FORMS = ['form-IBEzFK0TnU'];
 
 // GoHighLevel field ids, the same custom fields the Malaysia forms use.
 const F = {
@@ -309,7 +309,7 @@ export default async function handler(req, res) {
   const sends = [];
   const crmEnv = testMode ? 'TESTING_WEBHOOK_URL' : 'PH_LEAD_WEBHOOK_URL';
   if (process.env[crmEnv]) sends.push(forwardToWebhook(crmEnv, payload));
-  const larkEnv = PARTNER_FORMS.includes(body.formId) && process.env.LARK_PARTNER_WEBHOOK_URL ? 'LARK_PARTNER_WEBHOOK_URL' : 'LARK_WEBHOOK_URL';
+  const larkEnv = COLLAB_FORMS.includes(body.formId) && process.env.LARK_COLLAB_WEBHOOK_URL ? 'LARK_COLLAB_WEBHOOK_URL' : 'LARK_WEBHOOK_URL';
   if (process.env[larkEnv]) {
     sends.push(forwardToWebhook(larkEnv, toLarkRecord({
       payload, form, siteLocation, details, testMode, leadId,

@@ -7,8 +7,12 @@
 // Environment variables:
 //   PH_LEAD_WEBHOOK_URL   leads from both Philippines forms (FREE Consultation, and
 //                         Co-Investors, EPCs & Landowners)
-//   TESTING_WEBHOOK_URL   every lead goes here instead when the browser has the cookie
-//                         test_webhook=1 (set by visiting any page with ?test_webhook=1)
+//   LARK_WEBHOOK_URL      Lark Base workflow webhook ("When a webhook is received"); gets
+//                         every lead as a flat record (see toLarkRecord). Either webhook
+//                         can be left unset; the lead goes to whichever are set.
+//   TESTING_WEBHOOK_URL   the CRM lead goes here instead when the browser has the cookie
+//                         test_webhook=1 (set by visiting any page with ?test_webhook=1);
+//                         Lark still gets it, with test_lead "Yes"
 //   TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret, shared with the Malaysia site;
 //                         checks are skipped when unset
 //
@@ -315,12 +319,56 @@ export default async function handler(req, res) {
   payload.customData['Form'] = form.name;
 
   // A "test_webhook" cookie (set by visiting any page with ?test_webhook=1)
-  // sends every lead to TESTING_WEBHOOK_URL instead of the real CRM.
-  const envVar = getCookie(req, 'test_webhook') === '1' ? 'TESTING_WEBHOOK_URL' : 'PH_LEAD_WEBHOOK_URL';
-  console.log(`Lead (ph, ${body.formId}) -> ${envVar}`);
+  // sends the CRM lead to TESTING_WEBHOOK_URL instead; Lark still gets it, marked as a test.
+  const testMode = getCookie(req, 'test_webhook') === '1';
+  const sends = [];
+  const crmEnv = testMode ? 'TESTING_WEBHOOK_URL' : 'PH_LEAD_WEBHOOK_URL';
+  if (process.env[crmEnv]) sends.push(forwardToWebhook(crmEnv, payload));
+  if (process.env.LARK_WEBHOOK_URL) {
+    sends.push(forwardToWebhook('LARK_WEBHOOK_URL', toLarkRecord({
+      payload, form, siteLocation, details, testMode,
+      bizpartner: v[F.bizpartner] || '',
+      sessionSource: payload.attributionSource.sessionSource || '',
+    })));
+  }
+  if (!sends.length) {
+    console.error(`Lead (ph, ${body.formId}) not sent: neither ${crmEnv} nor LARK_WEBHOOK_URL is set.`);
+    return res.status(502).json({ error: "We couldn't send your details. Please try again." });
+  }
+  const results = await Promise.all(sends);
+  console.log(`Lead (ph, ${body.formId}) -> ${[process.env[crmEnv] && crmEnv, process.env.LARK_WEBHOOK_URL && 'LARK_WEBHOOK_URL'].filter(Boolean).join(' + ')}: ${results.map((ok) => (ok ? 'ok' : 'FAILED')).join(', ')}`);
 
-  if (!(await forwardToWebhook(envVar, payload))) {
+  // One destination that took the lead is enough; a retry would only duplicate it there.
+  if (!results.some(Boolean)) {
     return res.status(502).json({ error: "We couldn't send your details. Please try again." });
   }
   return res.status(200).json({ ok: true });
+}
+
+// The flat record sent to the Lark Base workflow ("When a webhook is received" → "Add record"):
+// one key per table column, all plain text, so each maps straight onto a column.
+function toLarkRecord({ payload, form, siteLocation, details, bizpartner, sessionSource, testMode }) {
+  const submittedAt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date()).replace(',', '');
+  return {
+    name: payload.full_name,
+    company: payload['Name of Company'],
+    phone: payload.phone ? '+' + payload.phone : '',
+    email: payload.email,
+    site_location: siteLocation,
+    details,
+    form: form.name,
+    country: payload.country,
+    lead_source: sessionSource,
+    utm_source: payload.customData['UTM Source'],
+    utm_medium: payload.customData['UTM Medium'],
+    utm_campaign: payload.customData['UTM Campaign'],
+    sales_partner: payload.salespartner,
+    biz_partner: bizpartner,
+    maqo: payload.MAQO,
+    page_url: payload.customData['Landing Page Source'],
+    submitted_at: submittedAt, // Philippine time, "2026-10-01 15:04"
+    test_lead: testMode ? 'Yes' : 'No',
+  };
 }

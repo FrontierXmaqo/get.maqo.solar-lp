@@ -2,8 +2,7 @@
 // and forwards them to the Philippines lead webhook in GoHighLevel's contact JSON, the same
 // shape the Malaysia site's leads have (api/_webhookTemplate.js). The webhook URL stays in
 // Vercel's environment and never reaches the browser. The Malaysia handler, api/submit.js,
-// is separate; the checks below are copied from it, except Cloudflare
-// Turnstile, which the Philippines forms don't use (the honeypot and rate limit remain).
+// is separate; the checks below are copied from it.
 //
 // Environment variables:
 //   PH_LEAD_WEBHOOK_URL   leads from both Philippines forms (FREE Consultation, and
@@ -17,6 +16,8 @@
 //   TESTING_WEBHOOK_URL   the CRM lead goes here instead when the browser has the cookie
 //                         test_webhook=1 (set by visiting any page with ?test_webhook=1);
 //                         Lark still gets it, with test_lead "Yes"
+//   TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret, shared with the Malaysia site;
+//                         checks are skipped when unset
 //
 // Philippine leads are not saved to the Malaysia site's Supabase tables.
 
@@ -61,6 +62,24 @@ function checkRateLimit(key) {
   if (bucket.count >= MAX_REQUESTS_PER_WINDOW) return false;
   bucket.count += 1;
   return true;
+}
+
+async function verifyTurnstileToken(token, remoteIp) {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) return true;
+  if (!token) return false;
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token, remoteip: remoteIp }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch (err) {
+    console.error('Turnstile verification request failed', err);
+    return false;
+  }
 }
 
 function clean(value, maxLength = MAX_FIELD_LENGTH) {
@@ -241,6 +260,10 @@ export default async function handler(req, res) {
   const phone = toLeadPhone(v && (v.phone ?? ''));
   const email = v ? v.email : '';
   if (!v || !phone || !EMAIL_PATTERN.test(email)) return res.status(400).json({ error: 'Please check the form and try again.' });
+
+  if (!(await verifyTurnstileToken(clean(body.token, 2000), clientIp))) {
+    return res.status(403).json({ error: 'Verification failed. Please try again.' });
+  }
 
   const a = body.attribution || {};
   const siteLocation = v[F.siteLocation] || '';

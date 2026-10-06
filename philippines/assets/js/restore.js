@@ -91,6 +91,13 @@
   });
 })();
 
+// Blog posts: "Back to top".
+(function () {
+  document.querySelectorAll('.back-to-top').forEach(function (button) {
+    button.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  });
+})();
+
 // Ad-campaign attribution, as on the Malaysia site (ported from the landingpage project's
 // lib/attribution.ts). UTM params and click ids only exist on the page an ad links to, so
 // they are captured on the first page of the visit and kept for 30 days. First touch wins:

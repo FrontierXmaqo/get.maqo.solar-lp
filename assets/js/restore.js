@@ -162,6 +162,131 @@
   });
 })();
 
+// Buttons: what each one does when clicked, which the runtime used to handle. The live
+// page's settings were not saved with the copy, so an "Email: …" button opens an email to
+// that address and every other call-to-action scrolls to the page's lead form. A
+// #button-actions JSON (as the Philippines copy has) overrides this per button.
+(function () {
+  var el = document.getElementById('button-actions');
+  var ACTIONS = el ? JSON.parse(el.textContent) : {};
+  var form = document.querySelector('.c-form');
+  // Some rows pull up over the button above them with a negative margin (the home page's
+  // "I Want To Join Them"); keep buttons on top so the whole button takes the click.
+  var style = document.createElement('style');
+  style.textContent = '.c-button button[id$="_btn"]{z-index:1}';
+  document.head.appendChild(style);
+  // Lazy images above the target can load during a smooth scroll and push it down, so the
+  // scroll is re-aimed until the target holds still at the top of the screen.
+  // It stops as soon as the visitor scrolls by hand.
+  function scrollToTarget(target) {
+    var tries = 0, cancelled = false;
+    var cancel = function () { cancelled = true; };
+    ['wheel', 'touchstart', 'keydown'].forEach(function (t) { window.addEventListener(t, cancel, { once: true, passive: true }); });
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    (function settle() {
+      setTimeout(function () {
+        if (!cancelled && Math.abs(target.getBoundingClientRect().top) > 40 && ++tries < 6) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          settle();
+        }
+      }, 700);
+    })();
+  }
+  document.querySelectorAll('.c-button button[id$="_btn"]').forEach(function (button) {
+    if (button.closest('a[href]')) return;
+    var label = button.getAttribute('aria-label') || button.textContent || '';
+    var email = label.match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/);
+    var action = ACTIONS[button.id.replace(/_btn$/, '')] ||
+      (email ? { url: 'mailto:' + email[0] } : form ? { scroll: form.id } : null);
+    if (!action) return;
+    button.addEventListener('click', function (e) {
+      if (action.scroll) {
+        var target = document.getElementById(action.scroll);
+        if (!target) return;
+        e.preventDefault();
+        scrollToTarget(target);
+      } else if (action.url) {
+        e.preventDefault();
+        if (action.newTab) window.open(action.url, '_blank', 'noopener');
+        else location.href = action.url;
+      }
+    });
+  });
+})();
+
+// Blog posts: "Back to top".
+(function () {
+  document.querySelectorAll('.back-to-top').forEach(function (button) {
+    button.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  });
+})();
+
+// Blog lists: the page numbers and the blog page's "More stories", filled from
+// /assets/blog-posts.json (built by scripts/blog-index.mjs from the saved posts).
+(function () {
+  var list = document.querySelector('.blog-post-wrapper');
+  var pager = document.querySelector('.pagination-container');
+  var compact = document.querySelector('.compact.blog-items .blog-row');
+  var more = document.querySelector('.more-actions-button-container .more-actions');
+  if (!(list && pager) && !(compact && more)) return;
+  var PAGE_SIZE = 4;
+
+  fetch('/assets/blog-posts.json').then(function (res) { return res.json(); }).then(function (posts) {
+    if (list && pager) {
+      var tag = location.pathname.match(/\/tag\/([^/]+)\/?$/);
+      if (tag) tag = decodeURIComponent(tag[1]);
+      var shown = tag ? posts.filter(function (p) { return p.tags.indexOf(tag) >= 0; }) : posts;
+      var pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+      var current = 1;
+
+      var button = function (text, page, opts) {
+        var b = document.createElement('button');
+        b.className = 'pagination-button' + (opts && opts.active ? ' active' : '');
+        b.textContent = text;
+        if (!page) b.disabled = true;
+        else b.addEventListener('click', function () { show(page, true); });
+        return b;
+      };
+      // Same layout as the live list: first, last, and the pages around the current one.
+      var show = function (page, scroll) {
+        current = page;
+        list.innerHTML = shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(function (p) { return p.card; }).join('');
+        pager.innerHTML = '';
+        pager.appendChild(button(' Previous ', page > 1 && page - 1));
+        var last = 0;
+        for (var i = 1; i <= pages; i++) {
+          if (i !== 1 && i !== pages && Math.abs(i - page) > 1) continue;
+          if (last && i - last > 1) pager.appendChild(button('...', 0));
+          pager.appendChild(button(String(i), i === page ? 0 : i, { active: i === page }));
+          if (i === page) pager.lastChild.disabled = false;
+          last = i;
+        }
+        pager.appendChild(button(' Next ', page < pages && page + 1));
+        if (scroll) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      show(1, false);
+    }
+
+    if (compact && more) {
+      var step = compact.children.length || 3;
+      var seen = function () {
+        return [].map.call(compact.querySelectorAll('.blog-item-heading a'), function (a) { return new URL(a.href, location.href).pathname; });
+      };
+      var rest = function () {
+        var have = seen();
+        return posts.filter(function (p) { return have.indexOf(p.href) < 0; });
+      };
+      var wrap = more.closest('.more-actions-button-container');
+      if (!rest().length) wrap.style.display = 'none';
+      more.addEventListener('click', function () {
+        var next = rest().slice(0, step);
+        next.forEach(function (p) { compact.insertAdjacentHTML('beforeend', p.compact); });
+        if (!rest().length) wrap.style.display = 'none';
+      });
+    }
+  }).catch(function () { /* the saved first page stays as it is */ });
+})();
+
 // Tracking (Google Tag Manager, Meta pixel) is loaded by the /api/tags script, which holds
 // the ids in Vercel. It starts the pixel only when GTM has not, and reports "Lead" once:
 // on the page after the redirect (like the old thank-you page code), or straight away when
@@ -292,6 +417,28 @@ var attribution = (function () {
       fbEventId: uuid()
     };
   };
+})();
+
+// Sales-partner codes (?salespartner=, ?maqo=, ?referer=) from a partner's link. Kept for
+// 30 days from the latest link that carries one, so the lead still credits the partner after
+// the visitor moves to another page, and sent with every form, including the residential
+// forms that have no hidden fields for them.
+var partner = (function () {
+  var KEY = 'maqo_partner';
+  var KEYS = ['salespartner', 'maqo', 'referer'];
+  var TTL_MS = 30 * 86400000;
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { /* blocked or corrupt */ }
+  if (!(saved.at > Date.now() - TTL_MS)) saved = {};
+  var params = new URLSearchParams(location.search);
+  if (KEYS.some(function (k) { return params.get(k); })) {
+    saved = { at: Date.now() };
+    KEYS.forEach(function (k) { saved[k] = (params.get(k) || '').slice(0, 200); });
+    try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) { /* this page still has them */ }
+  }
+  var get = function (k) { return KEYS.indexOf(k) >= 0 ? saved[k] || '' : ''; };
+  get.all = function () { return { salespartner: get('salespartner'), maqo: get('maqo'), referer: get('referer') }; };
+  return get;
 })();
 
 // QA test mode: ?test_webhook=1 on any page sets the test_webhook cookie for
@@ -529,7 +676,7 @@ var attribution = (function () {
     meta.fields.forEach(function (field) {
       var wrapper = wrapperFor(root, field);
       if (field.hidden) {
-        getters[field.id] = function () { return field.query ? params.get(field.query) || '' : ''; };
+        getters[field.id] = function () { return field.query ? params.get(field.query) || partner(field.query) : ''; };
         return;
       }
       if (field.options && field.type !== 'file_upload') {
@@ -702,6 +849,7 @@ var attribution = (function () {
             fields: values,
             files: uploads,
             attribution: attr,
+            partner: partner.all(),
             landingPageSource: location.origin + location.pathname,
             phoneCountry: (function () {
               for (var id in getters) if (getters[id].country) return getters[id].country();

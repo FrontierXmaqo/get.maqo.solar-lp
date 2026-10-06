@@ -330,6 +330,7 @@ export default async function handler(req, res) {
   }
 
   const a = body.attribution || {};
+  const partnerLink = body.partner || {};
   const common = {
     salutation: v[F.salutation] || '',
     fullName: (v.full_name || v.first_name || '').replace(/[\p{Cc}\p{Cf}]/gu, ''),
@@ -369,9 +370,10 @@ export default async function handler(req, res) {
     }),
     sourcePage: SOURCE_PAGE[kind],
     landingPageSource: getLandingPageSource(req, body.landingPageSource),
-    salespartner: v[F.salespartner] || '',
-    maqo: v[F.maqo] || '',
-    referer: v[F.referer] || '',
+    // From the form's hidden fields, else the partner link the visitor arrived on (restore.js keeps it).
+    salespartner: v[F.salespartner] || clean(partnerLink.salespartner),
+    maqo: v[F.maqo] || clean(partnerLink.maqo),
+    referer: v[F.referer] || clean(partnerLink.referer),
     remarks: '',
   };
 
@@ -431,6 +433,9 @@ export default async function handler(req, res) {
       utmCampaign: common.utmCampaign,
       utmTerm: common.utmTerm,
       utmContent: common.utmContent,
+      salespartner: common.salespartner,
+      maqo: common.maqo,
+      partnerReferer: common.referer,
       country: common.country,
       timezone: common.timezone,
       webhookOk,

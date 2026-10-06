@@ -65,7 +65,11 @@ To regenerate them:
 node scripts/snapshot.mjs
 ```
 
-The script removes the GoHighLevel runtime and Google Tag Manager. `assets/js/restore.js` adds back what the page still needs: entrance animations, number counters, both mobile menu styles, image slider controls, the YouTube embeds and the forms.
+The script removes the GoHighLevel runtime and Google Tag Manager. `assets/js/restore.js` adds back what the page still needs: entrance animations, number counters, both mobile menu styles, image slider controls, the YouTube embeds, the buttons, the blog lists and the forms.
+
+Buttons: the copy did not keep each button's GoHighLevel action, so `restore.js` gives them one. A button labelled with an email address ("Email: admin@maqo.asia") opens an email to it. Every other call-to-action ("Get My Free Solar Quotation", "Contact Us", "LEARN MORE", "Calculate My Savings", …) scrolls to the page's lead form. To send one button somewhere else, add a `<script type="application/json" id="button-actions">` to the page, the same way the Philippines page has one: `{"button-<id>": {"scroll": "<element id>"}}` or `{"button-<id>": {"url": "https://…", "newTab": true}}`.
+
+Blog lists: the snapshot only saved the first page of each blog list. `node scripts/blog-index.mjs` writes every saved post to `assets/blog-posts.json`, and `restore.js` uses it for the list page numbers (4 posts a page; a tag page shows that tag's posts) and the blog page's "More stories". Run it again after adding or re-crawling posts. The live blog had more posts than the 16 the crawl reached, so the lists show fewer pages than before.
 
 To preview locally with the form functions, use the Vercel CLI:
 
@@ -81,7 +85,7 @@ Known gaps:
 `scripts/snapshot.mjs` saves each form's fields, dropdown options and submit action into the page as `#form-meta`. `assets/js/restore.js` uses it to rebuild the dropdowns, check required fields, and post submissions to `/api/submit`. After a successful submit, forms either show their thank-you message or go to the thank-you page, the same as on the live site.
 
 - Salutation also offers "Tun". Extra options are listed in `EXTRA_OPTIONS` in the snapshot script.
-- Hidden tracking fields (`salespartner`, `maqo`, `referer`, `campaign_id`) are filled from the page URL's query string.
+- Hidden tracking fields (`salespartner`, `maqo`, `referer`, `campaign_id`) are filled from the page URL's query string. A partner link's `salespartner`, `maqo` and `referer` are also kept for 30 days in the browser and sent with every form (`partner` in the request), so a lead still credits the partner after the visitor moves to another page, and on the residential forms, which have no hidden fields for them. They go to the CRM's `salespartner`, `MAQO` and `referer` keys and to the Supabase row's `extra_fields`.
 - The career form's résumé is sent as base64. Uploads are limited to 3 MB in total.
 
 `api/submit.js` runs on Vercel and follows the landingpage project's `submitLead` action:

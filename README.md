@@ -55,6 +55,14 @@ This repository is maintained as a backup for MAQO Solar's GET landing page.
 **Original site:** `get.maqosolar.com`
 **Repository purpose:** Backup / Restoration
 
+## /homepage
+
+`get.maqosolar.com/homepage/...` shows a copy of the get.maqo.asia site: the
+`landingpage` repo built with `NEXT_PUBLIC_BASE_PATH=/homepage` as its own Vercel
+project. `middleware.js` forwards those paths to it (see the variables listed there);
+everything else on this domain is this static site, unchanged. Its pages point Google
+to get.maqo.asia as the original (canonical).
+
 ## Snapshot
 
 The whole site is copied as static pages. `scripts/snapshot.mjs` crawls get.maqosolar.com from the home page and the main pages, follows every internal link, and saves each page as `<slug>/index.html`. Shared CSS, images and fonts go in `assets/`. That covers 88 pages: the main pages, contact and landing pages, the blog, its posts, and its category, author and tag pages. The residential page is `-842225/`.

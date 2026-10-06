@@ -79,17 +79,47 @@
   list.addEventListener('click', function (e) { if (e.target.closest('a')) close(); });
 })();
 
-// YouTube videos: the runtime swaps the thumbnail placeholder for an embed.
+// YouTube videos: like the runtime, show the saved thumbnail with its ▶ button and swap in
+// the player when it is clicked. (Embedding the player straight away left the page's ▶
+// overlay on top of YouTube's own play button, so clicks never reached the video.)
 (function () {
+  // Video for each saved thumbnail; the snapshot kept the image but not the video link.
+  var VIDEOS = {
+    'd0c63b5c846e.jpg': '2dYRKkFv3es', // customer testimonial (home, residential landing)
+    '1c05dd07d167.jpg': '2dYRKkFv3es', // "MAQO SOLAR MALAYSIA" drone video (residential pages)
+    '0d89db902ecd.jpg': '2dYRKkFv3es', // Chuan Sin (Spritzer) rooftop (C&I pages)
+    '1a5bd1683e69.jpg': '2dYRKkFv3es', // 2S Packaging rooftop (C&I pages)
+    '6943afcdd96d.jpg': '2dYRKkFv3es'  // solar farm (C&I pages)
+  };
+  var style = document.createElement('style');
+  style.textContent = '.figure.youtube span.restore-playing{cursor:default}.figure.youtube span.restore-playing:after{display:none}';
+  document.head.appendChild(style);
+
   document.querySelectorAll('.video-container.youtube [data-bg-src]').forEach(function (el) {
-    var m = el.getAttribute('data-bg-src').match(/vi\/([^/]+)\//) || [];
-    var id = el.getAttribute('data-video-id') || m[1] || '2dYRKkFv3es';
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;padding-bottom:56.25%;height:0;overflow:hidden;';
-    wrap.innerHTML = '<iframe src="https://www.youtube.com/embed/' + id + '?rel=0&controls=1" title="YouTube video"' +
-      ' style="position:absolute;inset:0;width:100%;height:100%;border:0" loading="lazy"' +
-      ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
-    el.replaceWith(wrap);
+    var src = el.getAttribute('data-bg-src');
+    var m = src.match(/vi\/([^/]+)\//) || [];
+    var id = el.getAttribute('data-video-id') || m[1] || VIDEOS[src.split('/').pop()] || '2dYRKkFv3es';
+    var span = el.parentNode;
+    el.style.backgroundImage = 'url("' + src + '")';
+    el.style.backgroundPosition = 'center';
+    span.tabIndex = 0;
+    span.setAttribute('role', 'button');
+    span.setAttribute('aria-label', 'Play video');
+    function play() {
+      if (span.classList.contains('restore-playing')) return;
+      span.classList.add('restore-playing');
+      span.removeAttribute('role');
+      span.removeAttribute('tabindex');
+      span.removeAttribute('aria-label');
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;padding-bottom:56.25%;height:0;overflow:hidden;';
+      wrap.innerHTML = '<iframe src="https://www.youtube.com/embed/' + id + '?rel=0&controls=1&autoplay=1&playsinline=1" title="YouTube video"' +
+        ' style="position:absolute;inset:0;width:100%;height:100%;border:0"' +
+        ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+      el.replaceWith(wrap);
+    }
+    span.addEventListener('click', play);
+    span.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(); } });
   });
 })();
 

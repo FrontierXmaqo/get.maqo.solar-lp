@@ -619,3 +619,11 @@ var attribution = (function () {
     });
   });
 })();
+
+// Privacy Policy link at the bottom of every page (the snapshot's footers differ page to page).
+(function () {
+  var bar = document.createElement('div');
+  bar.style.cssText = 'padding:12px 16px;text-align:center;font:14px Montserrat,sans-serif;background:#fff;';
+  bar.innerHTML = '<a href="/privacy-policy/" style="color:#2c3345;text-decoration:underline;">Privacy Policy</a>';
+  document.body.appendChild(bar);
+})();

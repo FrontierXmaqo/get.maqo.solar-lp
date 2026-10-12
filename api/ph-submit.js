@@ -255,6 +255,7 @@ export default async function handler(req, res) {
 
   const form = forms[body.formId];
   if (!form) return res.status(400).json({ error: 'Unknown form' });
+  if (body.termsAccepted !== true) return res.status(400).json({ error: 'Please tick the box to agree to the Terms & Conditions.' });
 
   const v = validate(form, body.fields || {});
   const phone = toLeadPhone(v && (v.phone ?? ''));

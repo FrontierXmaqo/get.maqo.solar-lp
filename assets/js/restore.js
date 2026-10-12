@@ -516,6 +516,10 @@ var partner = (function () {
     // #_builder-form !important rule, and the phone library rewrites inline padding as you type, so this
     // has to be a stylesheet rule that outranks it.
     '#_builder-form .iti.iti--flag-fixed input[type=tel]{padding-left:72px!important}' +
+    '.restore-wa-note{text-align:center;color:#555;font-size:14px;margin:10px 0 0}' +
+    '.restore-wa-preview{border-top:1px dashed #ccc;margin-top:16px;padding-top:14px;font-size:14px;color:#444}' +
+    '.restore-wa-preview pre{background:#eff3ef;border:1px solid #dde3dd;border-radius:10px;padding:14px;margin:8px 0;white-space:pre-wrap;word-break:break-word;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;color:#111}' +
+    '.restore-wa-preview small{color:#777;font-size:13px}' +
     '.restore-thankyou{background:#fff;color:#000;border-radius:10px;padding:30px 20px;font-size:18px;text-align:center}';
   document.head.appendChild(style);
 
@@ -535,8 +539,9 @@ var partner = (function () {
     var lines = ["Hi Maqo Solar, I'd like a free solar quotation. My details:"];
     meta.fields.forEach(function (f) {
       var v = values[f.id];
-      if (f.hidden || v == null || v === '' || (Array.isArray(v) && !v.length)) return;
-      lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (Array.isArray(v) ? v.join(', ') : v));
+      if (f.hidden || f.type === 'file_upload') return;
+      v = Array.isArray(v) ? v.join(', ') : v;
+      lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (v || '-'));
     });
     return lines.join('\n');
   }
@@ -836,6 +841,28 @@ var partner = (function () {
     var termsBox = terms.querySelector('input');
     termsBox.addEventListener('change', function () { showError(terms, ''); });
     submitBox.parentNode.insertBefore(terms, submitBox);
+
+    // WhatsApp forms: a live preview of the message under the button.
+    if (meta.whatsapp) {
+      var note = document.createElement('p');
+      note.className = 'restore-wa-note';
+      note.textContent = 'WhatsApp will open with your details filled in. Press Send to reach us.';
+      var preview = document.createElement('div');
+      preview.className = 'restore-wa-preview';
+      preview.innerHTML = '<b>Preview: message that will be sent</b><pre aria-live="polite"></pre><small></small>';
+      preview.lastChild.textContent = 'Opens: wa.me/' + meta.whatsapp;
+      submitBox.parentNode.insertBefore(preview, submitBox.nextSibling);
+      submitBox.parentNode.insertBefore(note, preview);
+      var refresh = function () {
+        setTimeout(function () { // after the dropdown or input has taken the new value
+          var values = {};
+          for (var id in getters) values[id] = getters[id]();
+          preview.querySelector('pre').textContent = whatsappText(meta, values);
+        });
+      };
+      ['input', 'change', 'mousedown', 'keydown'].forEach(function (t) { root.addEventListener(t, refresh); });
+      refresh();
+    }
 
     var widget = null, token = '';
     turnstile.then(function (ts) {

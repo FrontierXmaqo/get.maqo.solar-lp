@@ -525,6 +525,17 @@ var partner = (function () {
     document.head.appendChild(s);
   });
 
+  // The prefilled WhatsApp message: the visible fields as "Label: value" lines.
+  function whatsappText(meta, values) {
+    var lines = ["Hi Maqo Solar, I'd like a free solar quotation. My details:"];
+    meta.fields.forEach(function (f) {
+      var v = values[f.id];
+      if (f.hidden || v == null || v === '' || (Array.isArray(v) && !v.length)) return;
+      lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (Array.isArray(v) ? v.join(', ') : v));
+    });
+    return lines.join('\n');
+  }
+
   function whenReady(test, fn, tries) {
     if (test()) return fn();
     if ((tries || 0) < 100) setTimeout(function () { whenReady(test, fn, (tries || 0) + 1); }, 100);
@@ -897,6 +908,12 @@ var partner = (function () {
           return res.json().catch(function () { return {}; }).then(function (out) {
             throw new Error(out.error || '');
           });
+        }
+        if (meta.whatsapp) {
+          // The lead is already saved above; WhatsApp carries it into respond.io once the visitor presses Send.
+          window.__maqoQueueLead(root.id, attr.fbEventId);
+          location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values));
+          return;
         }
         if (meta.redirect) {
           window.__maqoQueueLead(root.id, attr.fbEventId);

@@ -330,6 +330,12 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Verification failed. Please try again.' });
   }
 
+  // Preview (test) links have no lead webhooks or database, so a checked lead stops here.
+  if (process.env.VERCEL_ENV === 'preview') {
+    console.log(`Lead (preview, ${body.formId}) checked; not sent anywhere`);
+    return res.status(200).json({ ok: true });
+  }
+
   const a = body.attribution || {};
   const partnerLink = body.partner || {};
   const common = {

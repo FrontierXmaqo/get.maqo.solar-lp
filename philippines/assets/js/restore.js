@@ -227,6 +227,11 @@ var attribution = (function () {
     '.multi_select_form .multiselect__tag-icon:after{content:"\\00d7";color:#fff;font-size:14px}' +
     '.restore-error{color:#e93d3d;font-size:13px;margin-top:4px}' +
     '.restore-form-error{color:#e93d3d;font-size:14px;margin:10px 0;text-align:center}' +
+    '.restore-terms{margin:10px 0;font-size:14px;line-height:1.5}' +
+    '.restore-terms label{display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin:0}' +
+    '.restore-terms label,.restore-terms span{font-size:14px!important;line-height:1.5!important;font-weight:400!important}' +
+    '.restore-terms input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:#40b344}' +
+    '.restore-terms a{color:inherit;text-decoration:underline}' +
     '.restore-honeypot{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden}' +
     '.restore-turnstile{display:flex;justify-content:center}' +
     '.restore-turnstile iframe{margin:10px 0}' +
@@ -511,6 +516,17 @@ var attribution = (function () {
     formError.style.display = 'none';
     submitBox.parentNode.insertBefore(formError, submitBox);
 
+    // Required agreement to the Terms & Conditions, just above the submit button.
+    var terms = document.createElement('div');
+    terms.className = 'restore-terms';
+    terms.innerHTML = '<label><input type="checkbox" name="terms"> <span>I agree to the ' +
+      '<a href="/phil/terms-and-conditions/" target="_blank" rel="noopener">Terms &amp; Conditions</a> and ' +
+      '<a href="/privacy-policy/" target="_blank" rel="noopener">Privacy Policy</a>, ' +
+      'and agree to be contacted by MAQO RE OPC about my enquiry.</span></label>';
+    var termsBox = terms.querySelector('input');
+    termsBox.addEventListener('change', function () { showError(terms, ''); });
+    submitBox.parentNode.insertBefore(terms, submitBox);
+
     var widget = null, token = '';
     turnstile.then(function (ts) {
       if (!ts) return;
@@ -560,6 +576,9 @@ var attribution = (function () {
         if (message && !firstBad) firstBad = wrapper;
       });
 
+      showError(terms, termsBox.checked ? '' : 'Please tick the box to agree to the Terms & Conditions.');
+      if (!termsBox.checked && !firstBad) firstBad = terms;
+
       if (firstBad) { firstBad.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
       if (widget && !token) return fail('Please complete the verification check.');
 
@@ -589,6 +608,7 @@ var attribution = (function () {
               try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; }
             })(),
             token: token,
+            termsAccepted: termsBox.checked,
             website: honeypot.value
           })
         });
@@ -624,6 +644,7 @@ var attribution = (function () {
 (function () {
   var bar = document.createElement('div');
   bar.style.cssText = 'padding:12px 16px;text-align:center;font:14px Montserrat,sans-serif;background:#fff;';
-  bar.innerHTML = '<a href="/privacy-policy/" style="color:#2c3345;text-decoration:underline;">Privacy Policy</a>';
+  bar.innerHTML = '<a href="/privacy-policy/" style="color:#2c3345;text-decoration:underline;">Privacy Policy</a>' +
+    ' &nbsp;|&nbsp; <a href="/phil/terms-and-conditions/" style="color:#2c3345;text-decoration:underline;">Terms &amp; Conditions</a>';
   document.body.appendChild(bar);
 })();

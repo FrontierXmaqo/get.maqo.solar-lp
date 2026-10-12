@@ -518,6 +518,8 @@ var partner = (function () {
   // secret key stays in Vercel as TURNSTILE_SECRET_KEY and api/submit.js checks the token.
   var TURNSTILE_SITE_KEY = '0x4AAAAAAFJwP8-9jS534EFE';
   var turnstile = new Promise(function (resolve) {
+    // Vercel test links (*.vercel.app) aren't on the site key's domain list, so the widget can't load there.
+    if (/\.vercel\.app$/.test(location.hostname)) return resolve(null);
     window.__onTurnstile = function () { resolve({ api: window.turnstile, key: TURNSTILE_SITE_KEY }); };
     var s = document.createElement('script');
     s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__onTurnstile';

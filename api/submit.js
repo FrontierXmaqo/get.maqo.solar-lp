@@ -78,7 +78,8 @@ function checkRateLimit(key) {
 
 async function verifyTurnstileToken(token, remoteIp) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true;
+  // Preview deployments run on *.vercel.app, where the widget can't load (see restore.js).
+  if (!secret || process.env.VERCEL_ENV === 'preview') return true;
   if (!token) return false;
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {

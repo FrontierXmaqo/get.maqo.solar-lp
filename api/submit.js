@@ -78,8 +78,7 @@ function checkRateLimit(key) {
 
 async function verifyTurnstileToken(token, remoteIp) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  // Preview deployments run on *.vercel.app, where the widget can't load (see restore.js).
-  if (!secret || process.env.VERCEL_ENV === 'preview') return true;
+  if (!secret) return true;
   if (!token) return false;
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -328,12 +327,6 @@ export default async function handler(req, res) {
 
   if (!(await verifyTurnstileToken(clean(body.token, 2000), clientIp))) {
     return res.status(403).json({ error: 'Verification failed. Please try again.' });
-  }
-
-  // Preview (test) links have no lead webhooks or database, so a checked lead stops here.
-  if (process.env.VERCEL_ENV === 'preview') {
-    console.log(`Lead (preview, ${body.formId}) checked; not sent anywhere`);
-    return res.status(200).json({ ok: true });
   }
 
   const a = body.attribution || {};

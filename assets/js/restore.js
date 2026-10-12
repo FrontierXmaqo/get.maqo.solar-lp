@@ -518,8 +518,6 @@ var partner = (function () {
   // secret key stays in Vercel as TURNSTILE_SECRET_KEY and api/submit.js checks the token.
   var TURNSTILE_SITE_KEY = '0x4AAAAAAFJwP8-9jS534EFE';
   var turnstile = new Promise(function (resolve) {
-    // Vercel test links (*.vercel.app) aren't on the site key's domain list, so the widget can't load there.
-    if (/\.vercel\.app$/.test(location.hostname)) return resolve(null);
     window.__onTurnstile = function () { resolve({ api: window.turnstile, key: TURNSTILE_SITE_KEY }); };
     var s = document.createElement('script');
     s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__onTurnstile';
@@ -825,7 +823,7 @@ var partner = (function () {
 
     var widget = null, token = '';
     turnstile.then(function (ts) {
-      if (!ts) return;
+      if (!ts || meta.whatsapp) return; // WhatsApp forms never reach the server
       var box = document.createElement('div');
       box.className = 'restore-turnstile';
       submitBox.parentNode.insertBefore(box, submitBox);
@@ -872,6 +870,15 @@ var partner = (function () {
       });
 
       if (firstBad) { firstBad.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+      if (meta.whatsapp) {
+        // The lead goes to respond.io through WhatsApp only, once the visitor presses Send there.
+        var eventId = attribution().fbEventId;
+        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values)); };
+        button.disabled = true;
+        // Report the Lead before leaving, but never hold the visitor more than a second.
+        Promise.race([window.__maqoTrackLead(root.id, eventId), new Promise(function (r) { setTimeout(r, 1000); })]).then(go, go);
+        return;
+      }
       if (widget && !token) return fail('Please complete the verification check.');
 
       button.disabled = true;
@@ -910,12 +917,6 @@ var partner = (function () {
           return res.json().catch(function () { return {}; }).then(function (out) {
             throw new Error(out.error || '');
           });
-        }
-        if (meta.whatsapp) {
-          // The lead is already saved above; WhatsApp carries it into respond.io once the visitor presses Send.
-          window.__maqoQueueLead(root.id, attr.fbEventId);
-          location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values));
-          return;
         }
         if (meta.redirect) {
           window.__maqoQueueLead(root.id, attr.fbEventId);

@@ -527,6 +527,9 @@ var partner = (function () {
   // secret key stays in Vercel as TURNSTILE_SECRET_KEY and api/submit.js checks the token.
   var TURNSTILE_SITE_KEY = '0x4AAAAAAFJwP8-9jS534EFE';
   var turnstile = new Promise(function (resolve) {
+    // The site key only allows get.maqosolar.com; on *.vercel.app test sites the widget can't load
+    // (their projects have no TURNSTILE_SECRET_KEY, so api/submit.js skips the check there too).
+    if (/\.vercel\.app$/.test(location.hostname)) return resolve(null);
     window.__onTurnstile = function () { resolve({ api: window.turnstile, key: TURNSTILE_SITE_KEY }); };
     var s = document.createElement('script');
     s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__onTurnstile';
@@ -866,7 +869,7 @@ var partner = (function () {
 
     var widget = null, token = '';
     turnstile.then(function (ts) {
-      if (!ts || meta.whatsapp) return; // WhatsApp forms never reach the server
+      if (!ts) return;
       var box = document.createElement('div');
       box.className = 'restore-turnstile';
       submitBox.parentNode.insertBefore(box, submitBox);
@@ -916,15 +919,6 @@ var partner = (function () {
       if (!termsBox.checked && !firstBad) firstBad = terms;
 
       if (firstBad) { firstBad.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
-      if (meta.whatsapp) {
-        // The lead goes to respond.io through WhatsApp only, once the visitor presses Send there.
-        var eventId = attribution().fbEventId;
-        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values)); };
-        button.disabled = true;
-        // Report the Lead before leaving, but never hold the visitor more than a second.
-        Promise.race([window.__maqoTrackLead(root.id, eventId), new Promise(function (r) { setTimeout(r, 1000); })]).then(go, go);
-        return;
-      }
       if (widget && !token) return fail('Please complete the verification check.');
 
       button.disabled = true;
@@ -934,6 +928,13 @@ var partner = (function () {
         if (spin) spin.style.display = '';
       }
       var attr = attribution();
+      // WhatsApp forms: after the lead is saved (Lark + Supabase), open WhatsApp with the details.
+      // It opens even if saving failed, so the visitor can still reach us there.
+      var toWhatsapp = function () {
+        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values)); };
+        // Report the Lead before leaving, but never hold the visitor more than a second.
+        Promise.race([window.__maqoTrackLead(root.id, attr.fbEventId), new Promise(function (r) { setTimeout(r, 1000); })]).then(go, go);
+      };
       Promise.all(files.map(function (f) {
         return readFile(f.file).then(function (data) { data.field = f.field.label; return data; });
       })).then(function (uploads) {
@@ -960,6 +961,10 @@ var partner = (function () {
           })
         });
       }).then(function (res) {
+        if (meta.whatsapp) {
+          if (!res.ok) console.warn('Lead not saved', res.status);
+          return toWhatsapp();
+        }
         if (!res.ok) {
           return res.json().catch(function () { return {}; }).then(function (out) {
             throw new Error(out.error || '');
@@ -979,6 +984,7 @@ var partner = (function () {
         wrap.innerHTML = '';
         wrap.appendChild(thanks);
       }).catch(function (err) {
+        if (meta.whatsapp) return toWhatsapp();
         fail(err.message || "We couldn't send your details. Please try again.");
         if (widget) { widget.api.reset(widget.id); token = ''; }
       }).then(function () {

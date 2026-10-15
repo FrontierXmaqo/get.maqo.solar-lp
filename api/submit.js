@@ -422,10 +422,19 @@ export default async function handler(req, res) {
   // Ref id from the browser; the WhatsApp message repeats it. Best effort: never fails the lead.
   const refId = /^MQ-[A-HJ-NP-Z2-9]{5}$/.test(body.refId) ? body.refId : '';
   if (refId) {
+    const list = (x) => [].concat(x || '').join(', ');
     await forwardToWebhook('LARK_WEBHOOK_URL', {
-      ref_id: refId, status: 'Empty Lead', name: common.fullName, phone: common.phone,
-      email: common.email, form_id: body.formId, kind, page: common.landingPageSource,
-      utm_source: common.utmSource, utm_campaign: common.utmCampaign, created_at: new Date().toISOString(),
+      ref_id: refId, status: 'Empty Lead', created_at: new Date().toISOString(),
+      name: common.fullName, salutation: common.salutation, phone: common.phone, email: common.email,
+      state: common.state, country: common.country, timezone: common.timezone,
+      form_id: body.formId, kind, source_page: common.sourcePage, page: common.landingPageSource,
+      property_type: v[F.propertyType] || '', electric_supply: v[F.electricSupply] || '',
+      monthly_bill: list(v[F.resiBill] || v[F.ciBill] || v[F.bessBill]), preferred_language: v[F.language] || '',
+      company_name: v[F.companyName] || '', industry: list(v[F.industry]), role: list(v[F.role]),
+      session_source: common.sessionSource, referrer: common.sourceOfLeads, landing_url: common.attributionUrl,
+      campaign_id: common.campaignId, utm_source: common.utmSource, utm_medium: common.utmMedium,
+      utm_campaign: common.utmCampaign, utm_term: common.utmTerm, utm_content: common.utmContent,
+      gclid: common.gclid, fbclid: common.fbclid, salespartner: common.salespartner, maqo: common.maqo, referer: common.referer,
     });
   }
 

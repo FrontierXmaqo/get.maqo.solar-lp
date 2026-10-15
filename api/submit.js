@@ -10,7 +10,7 @@
 //   TESTING_WEBHOOK_URL   every lead goes here instead when the browser has the
 //                         cookie test_webhook=1 (set by visiting ?test_webhook=1)
 //   TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret; checks are skipped when unset
-//   LARK_WEBHOOK_URL      every submission is also posted here with its refId (status "Empty Lead")
+//   LARK_REF_WEBHOOK_URL      every submission is also posted here with its refId (status "Empty Lead")
 //                         so Lark can later flip it to "New Lead" when respond.io sees the same refId.
 //   SUPABASE_URL          Supabase project URL. With SUPABASE_ANON_KEY, every real lead is
 //   SUPABASE_ANON_KEY     also saved to the landing page CMS tables (atap_leads, ci_leads).
@@ -423,7 +423,7 @@ export default async function handler(req, res) {
   const refId = /^MQ-[A-HJ-NP-Z2-9]{5}$/.test(body.refId) ? body.refId : '';
   if (refId) {
     const list = (x) => [].concat(x || '').join(', ');
-    await forwardToWebhook('LARK_WEBHOOK_URL', {
+    await forwardToWebhook('LARK_REF_WEBHOOK_URL', {
       ref_id: refId, status: 'Empty Lead', created_at: new Date().toISOString(),
       name: common.fullName, salutation: common.salutation, phone: common.phone, email: common.email,
       state: common.state, country: common.country, timezone: common.timezone,

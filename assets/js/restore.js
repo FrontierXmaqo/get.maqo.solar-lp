@@ -449,6 +449,15 @@ var attribution = (function () {
   };
 })();
 
+// Ref id shown to the customer only inside the WhatsApp message, e.g. MQ-7K3F9. No 0/O/1/I.
+var WA_NUMBER = '60187771095';
+function newRefId() {
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', out = 'MQ-';
+  var r = crypto.getRandomValues(new Uint8Array(5));
+  for (var i = 0; i < 5; i++) out += chars[r[i] % chars.length];
+  return out;
+}
+
 // Sales-partner codes (?salespartner=, ?maqo=, ?referer=) from a partner's link. Kept for
 // 30 days from the latest link that carries one, so the lead still credits the partner after
 // the visitor moves to another page, and sent with every form, including the residential
@@ -516,6 +525,7 @@ var partner = (function () {
     // #_builder-form !important rule, and the phone library rewrites inline padding as you type, so this
     // has to be a stylesheet rule that outranks it.
     '#_builder-form .iti.iti--flag-fixed input[type=tel]{padding-left:72px!important}' +
+    '.restore-wa{display:inline-block;margin-top:14px;padding:12px 24px;border-radius:8px;background:#25d366;color:#fff;font-weight:700;text-decoration:none}'+
     '.restore-thankyou{background:#fff;color:#000;border-radius:10px;padding:30px 20px;font-size:18px;text-align:center}';
   document.head.appendChild(style);
 
@@ -887,6 +897,7 @@ var partner = (function () {
         if (spin) spin.style.display = '';
       }
       var attr = attribution();
+      var refId = newRefId();
       Promise.all(files.map(function (f) {
         return readFile(f.file).then(function (data) { data.field = f.field.label; return data; });
       })).then(function (uploads) {
@@ -898,6 +909,7 @@ var partner = (function () {
             fields: values,
             files: uploads,
             attribution: attr,
+            refId: refId,
             partner: partner.all(),
             landingPageSource: location.origin + location.pathname,
             phoneCountry: (function () {
@@ -918,17 +930,22 @@ var partner = (function () {
             throw new Error(out.error || '');
           });
         }
-        if (meta.redirect) {
-          window.__maqoQueueLead(root.id, attr.fbEventId);
-          location.href = meta.redirect;
-          return;
-        }
+        // Test flow: no redirect; the WhatsApp message carries refId so respond.io can match it to this lead.
         window.__maqoTrackLead(root.id, attr.fbEventId);
         var wrap = root.querySelector('.ghl-form-wrap') || root;
         var thanks = document.createElement('div');
         thanks.className = 'restore-thankyou';
         thanks.setAttribute('role', 'status');
-        thanks.textContent = meta.thankyou || 'Thank you for taking the time to complete this form.';
+        var msg = document.createElement('p');
+        msg.textContent = 'Thank you! One last step: tap below and send us the WhatsApp message so we can follow up.';
+        var wa = document.createElement('a');
+        wa.className = 'restore-wa';
+        wa.target = '_blank';
+        wa.rel = 'noopener';
+        wa.textContent = 'Chat on WhatsApp';
+        wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent("Hi Maqo, I'd like a solar quote. (Ref: " + refId + ')');
+        thanks.appendChild(msg);
+        thanks.appendChild(wa);
         wrap.innerHTML = '';
         wrap.appendChild(thanks);
       }).catch(function (err) {

@@ -10,6 +10,8 @@
 //   TESTING_WEBHOOK_URL   every lead goes here instead when the browser has the
 //                         cookie test_webhook=1 (set by visiting ?test_webhook=1)
 //   TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret; checks are skipped when unset
+//   LARK_WEBHOOK_URL      every submission is also posted here with its refId (status "Empty Lead")
+//                         so Lark can later flip it to "New Lead" when respond.io sees the same refId.
 //   SUPABASE_URL          Supabase project URL. With SUPABASE_ANON_KEY, every real lead is
 //   SUPABASE_ANON_KEY     also saved to the landing page CMS tables (atap_leads, ci_leads).
 //                         Those tables let the anon role insert only; staff read them in the CMS.
@@ -416,6 +418,16 @@ export default async function handler(req, res) {
   console.log(`Lead (${kind}, ${body.formId}) -> ${envVar}`);
 
   const webhookOk = await forwardToWebhook(envVar, payload);
+
+  // Ref id from the browser; the WhatsApp message repeats it. Best effort: never fails the lead.
+  const refId = /^MQ-[A-HJ-NP-Z2-9]{5}$/.test(body.refId) ? body.refId : '';
+  if (refId) {
+    await forwardToWebhook('LARK_WEBHOOK_URL', {
+      ref_id: refId, status: 'Empty Lead', name: common.fullName, phone: common.phone,
+      email: common.email, form_id: body.formId, kind, page: common.landingPageSource,
+      utm_source: common.utmSource, utm_campaign: common.utmCampaign, created_at: new Date().toISOString(),
+    });
+  }
 
   // Real leads are also kept in the CMS database, so a failed webhook doesn't lose them.
   // Test-mode leads stay out of it. extra_fields records what the CMS has no column for.

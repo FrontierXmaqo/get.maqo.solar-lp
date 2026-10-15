@@ -420,7 +420,7 @@ export default async function handler(req, res) {
   const webhookOk = await forwardToWebhook(envVar, payload);
 
   // Ref id from the browser; the WhatsApp message repeats it. Best effort: never fails the lead.
-  const refId = /^MQ-[A-HJ-NP-Z2-9]{5}$/.test(body.refId) ? body.refId : '';
+  const refId = /^MQ-[A-HJ-NP-Z2-9]{6}$/.test(body.refId) ? body.refId : '';
   if (refId) {
     const list = (x) => [].concat(x || '').join(', ');
     await forwardToWebhook('LARK_REF_WEBHOOK_URL', {

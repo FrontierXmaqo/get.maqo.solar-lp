@@ -449,12 +449,12 @@ var attribution = (function () {
   };
 })();
 
-// Ref id shown to the customer only inside the WhatsApp message, e.g. MQ-7K3F9. No 0/O/1/I.
+// Ref id shown to the customer only inside the WhatsApp message, e.g. MQ-7K3F9X. No 0/O/1/I.
 var WA_NUMBER = '60187771095';
 function newRefId() {
   var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', out = 'MQ-';
-  var r = crypto.getRandomValues(new Uint8Array(5));
-  for (var i = 0; i < 5; i++) out += chars[r[i] % chars.length];
+  var r = crypto.getRandomValues(new Uint8Array(6));
+  for (var i = 0; i < 6; i++) out += chars[r[i] % chars.length];
   return out;
 }
 
@@ -526,6 +526,10 @@ var partner = (function () {
     // has to be a stylesheet rule that outranks it.
     '#_builder-form .iti.iti--flag-fixed input[type=tel]{padding-left:72px!important}' +
     '.restore-wa{display:inline-block;margin-top:14px;padding:12px 24px;border-radius:8px;background:#25d366;color:#fff;font-weight:700;text-decoration:none}'+
+    '.restore-wa-note{text-align:center;color:#555;font-size:14px;margin:10px 0 0}' +
+    '.restore-wa-preview{border-top:1px dashed #ccc;margin-top:16px;padding-top:14px;font-size:14px;color:#444}' +
+    '.restore-wa-preview pre{background:#eff3ef;border:1px solid #dde3dd;border-radius:10px;padding:14px;margin:8px 0;white-space:pre-wrap;word-break:break-word;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;color:#111}' +
+    '.restore-wa-preview small{color:#777;font-size:13px}' +
     '.restore-thankyou{background:#fff;color:#000;border-radius:10px;padding:30px 20px;font-size:18px;text-align:center}';
   document.head.appendChild(style);
 
@@ -533,12 +537,28 @@ var partner = (function () {
   // secret key stays in Vercel as TURNSTILE_SECRET_KEY and api/submit.js checks the token.
   var TURNSTILE_SITE_KEY = '0x4AAAAAAFJwP8-9jS534EFE';
   var turnstile = new Promise(function (resolve) {
+    // The site key only allows get.maqosolar.com; on *.vercel.app test sites the widget can't load
+    // (their projects have no TURNSTILE_SECRET_KEY, so api/submit.js skips the check there too).
+    if (/\.vercel\.app$/.test(location.hostname)) return resolve(null);
     window.__onTurnstile = function () { resolve({ api: window.turnstile, key: TURNSTILE_SITE_KEY }); };
     var s = document.createElement('script');
     s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__onTurnstile';
     s.async = true;
     document.head.appendChild(s);
   });
+
+  // The prefilled WhatsApp message: the visible fields as "Label: value" lines.
+  function whatsappText(meta, values, refId) {
+    var lines = ["Hi Maqo Solar, I'd like a free solar quotation. My details:"];
+    meta.fields.forEach(function (f) {
+      var v = values[f.id];
+      if (f.hidden || f.type === 'file_upload') return;
+      v = Array.isArray(v) ? v.join(', ') : v;
+      lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (v || '-'));
+    });
+    lines.push('Ref: ' + (refId || 'MQ-XXXXXX')); // respond.io matches this to the Lark row
+    return lines.join('\n');
+  }
 
   function whenReady(test, fn, tries) {
     if (test()) return fn();
@@ -836,6 +856,28 @@ var partner = (function () {
     termsBox.addEventListener('change', function () { showError(terms, ''); });
     submitBox.parentNode.insertBefore(terms, submitBox);
 
+    // WhatsApp forms: a live preview of the message under the button.
+    if (meta.whatsapp) {
+      var note = document.createElement('p');
+      note.className = 'restore-wa-note';
+      note.textContent = 'WhatsApp will open with your details filled in. Press Send to reach us.';
+      var preview = document.createElement('div');
+      preview.className = 'restore-wa-preview';
+      preview.innerHTML = '<b>Preview: message that will be sent</b><pre aria-live="polite"></pre><small></small>';
+      preview.lastChild.textContent = 'Opens: wa.me/' + meta.whatsapp;
+      submitBox.parentNode.insertBefore(preview, submitBox.nextSibling);
+      submitBox.parentNode.insertBefore(note, preview);
+      var refresh = function () {
+        setTimeout(function () { // after the dropdown or input has taken the new value
+          var values = {};
+          for (var id in getters) values[id] = getters[id]();
+          preview.querySelector('pre').textContent = whatsappText(meta, values);
+        });
+      };
+      ['input', 'change', 'mousedown', 'keydown'].forEach(function (t) { root.addEventListener(t, refresh); });
+      refresh();
+    }
+
     var widget = null, token = '';
     turnstile.then(function (ts) {
       if (!ts) return;
@@ -898,6 +940,13 @@ var partner = (function () {
       }
       var attr = attribution();
       var refId = newRefId();
+      // WhatsApp forms: after the lead is saved (Lark + Supabase), open WhatsApp with the details.
+      // It opens even if saving failed, so the visitor can still reach us there.
+      var toWhatsapp = function () {
+        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values, refId)); };
+        // Report the Lead before leaving, but never hold the visitor more than a second.
+        Promise.race([window.__maqoTrackLead(root.id, attr.fbEventId), new Promise(function (r) { setTimeout(r, 1000); })]).then(go, go);
+      };
       Promise.all(files.map(function (f) {
         return readFile(f.file).then(function (data) { data.field = f.field.label; return data; });
       })).then(function (uploads) {
@@ -925,6 +974,10 @@ var partner = (function () {
           })
         });
       }).then(function (res) {
+        if (meta.whatsapp) {
+          if (!res.ok) console.warn('Lead not saved', res.status);
+          return toWhatsapp();
+        }
         if (!res.ok) {
           return res.json().catch(function () { return {}; }).then(function (out) {
             throw new Error(out.error || '');
@@ -949,6 +1002,7 @@ var partner = (function () {
         wrap.innerHTML = '';
         wrap.appendChild(thanks);
       }).catch(function (err) {
+        if (meta.whatsapp) return toWhatsapp();
         fail(err.message || "We couldn't send your details. Please try again.");
         if (widget) { widget.api.reset(widget.id); token = ''; }
       }).then(function () {

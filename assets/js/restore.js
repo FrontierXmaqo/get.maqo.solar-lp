@@ -452,10 +452,14 @@ var attribution = (function () {
 // Ref id shown to the customer only inside the WhatsApp message, e.g. MQ-7K3F9X. No 0/O/1/I.
 var WA_NUMBER = '60187771095';
 function newRefId() {
-  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', out = 'MQ-';
-  var r = crypto.getRandomValues(new Uint8Array(6));
-  for (var i = 0; i < 6; i++) out += chars[r[i] % chars.length];
-  return out;
+  var letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ', digits = '23456789', chars = letters + digits;
+  var r = crypto.getRandomValues(new Uint8Array(8)), out = [];
+  for (var i = 0; i < 6; i++) out.push(chars[r[i] % chars.length]);
+  // Always a mix: if all six came out the same kind, swap one for the other kind.
+  var s = out.join('');
+  if (!/\d/.test(s)) out[r[6] % 6] = digits[r[7] % digits.length];
+  else if (!/[A-Z]/.test(s)) out[r[6] % 6] = letters[r[7] % letters.length];
+  return 'MQ-' + out.join('');
 }
 
 // Sales-partner codes (?salespartner=, ?maqo=, ?referer=) from a partner's link. Kept for

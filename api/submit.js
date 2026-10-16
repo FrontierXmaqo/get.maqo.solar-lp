@@ -430,7 +430,8 @@ export default async function handler(req, res) {
 
   // Ref id for the Lark row. It goes back to the browser, which puts it in the WhatsApp message so
   // respond.io can match it. Lark starts the row as "Empty Lead" and it becomes "New Lead" then.
-  const refId = newRefId();
+  // The browser makes the id so it can show it in the WhatsApp preview; a missing or odd one is replaced.
+  const refId = /^MQ-[A-HJ-NP-Z2-9]{6}$/.test(body.refId) ? body.refId : newRefId();
   payload.ref_id = refId;
   payload.lead_status = 'Empty Lead';
 

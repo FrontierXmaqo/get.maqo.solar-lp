@@ -541,16 +541,29 @@ var partner = (function () {
     document.head.appendChild(s);
   });
 
-  // The prefilled WhatsApp message: the visible fields as "Label: value" lines.
+  // Ref id for this form view, e.g. MQ-7K3F9X: always a mix of letters and digits, no 0/O/1/I. It is the
+  // first line of the WhatsApp message so respond.io can match it to the Lark row; api/submit.js checks it.
+  function newRefId() {
+    var letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ', digits = '23456789', chars = letters + digits;
+    var r = crypto.getRandomValues(new Uint8Array(8)), out = [];
+    for (var i = 0; i < 6; i++) out.push(chars[r[i] % chars.length]);
+    var s = out.join('');
+    if (!/\d/.test(s)) out[r[6] % 6] = digits[r[7] % digits.length];
+    else if (!/[A-Z]/.test(s)) out[r[6] % 6] = letters[r[7] % letters.length];
+    return 'MQ-' + out.join('');
+  }
+
+  // The prefilled WhatsApp message: the ref id first, then the visible fields as "Label: value" lines.
   function whatsappText(meta, values, refId) {
-    var lines = ["Hi Maqo Solar, I'd like a free solar quotation. My details:"];
+    var lines = [];
+    if (refId) lines.push('Ref: ' + refId);
+    lines.push("Hi Maqo Solar, I'd like a free solar quotation. My details:");
     meta.fields.forEach(function (f) {
       var v = values[f.id];
       if (f.hidden || f.type === 'file_upload') return;
       v = Array.isArray(v) ? v.join(', ') : v;
       lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (v || '-'));
     });
-    if (refId) lines.push('Ref: ' + refId); // from the server; left out of the preview box, respond.io matches it to the Lark row
     return lines.join('\n');
   }
 
@@ -731,6 +744,7 @@ var partner = (function () {
     if (!button) return;
     var loader = root.querySelector('.loader-submit');
     var getters = {};
+    var refId = newRefId();
 
     meta.fields.forEach(function (field) {
       var wrapper = wrapperFor(root, field);
@@ -865,7 +879,7 @@ var partner = (function () {
         setTimeout(function () { // after the dropdown or input has taken the new value
           var values = {};
           for (var id in getters) values[id] = getters[id]();
-          preview.querySelector('pre').textContent = whatsappText(meta, values);
+          preview.querySelector('pre').textContent = whatsappText(meta, values, refId);
         });
       };
       ['input', 'change', 'mousedown', 'keydown'].forEach(function (t) { root.addEventListener(t, refresh); });
@@ -933,11 +947,11 @@ var partner = (function () {
         if (spin) spin.style.display = '';
       }
       var attr = attribution();
-      var refId = '';
       // WhatsApp forms: after the lead is saved (Lark + Supabase), open WhatsApp with the details.
       // It opens even if saving failed, so the visitor can still reach us there.
       var toWhatsapp = function () {
-        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values, refId)); };
+        var ref = refId;
+        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values, ref)); };
         // Report the Lead before leaving, but never hold the visitor more than a second.
         Promise.race([window.__maqoTrackLead(root.id, attr.fbEventId), new Promise(function (r) { setTimeout(r, 1000); })]).then(go, go);
       };
@@ -952,6 +966,7 @@ var partner = (function () {
             fields: values,
             files: uploads,
             attribution: attr,
+            refId: refId,
             partner: partner.all(),
             landingPageSource: location.origin + location.pathname,
             phoneCountry: (function () {
@@ -969,7 +984,7 @@ var partner = (function () {
       }).then(function (res) {
         // The server makes the ref id and sends it back; it goes into the WhatsApp message only.
         return res.json().catch(function () { return {}; }).then(function (out) {
-          if (res.ok) refId = out.refId || '';
+          if (res.ok && out.refId) refId = out.refId; // the server's id wins if it had to replace ours
           if (meta.whatsapp) {
             if (!res.ok) console.warn('Lead not saved', res.status);
             return toWhatsapp();
@@ -987,7 +1002,7 @@ var partner = (function () {
           wa.target = '_blank';
           wa.rel = 'noopener';
           wa.textContent = 'Chat on WhatsApp';
-          wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent("Hi Maqo, I'd like a solar quote." + (refId ? '\nRef: ' + refId : ''));
+          wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent((refId ? 'Ref: ' + refId + '\n' : '') + "Hi Maqo, I'd like a solar quote.");
           thanks.appendChild(msg);
           thanks.appendChild(wa);
           wrap.innerHTML = '';
@@ -998,6 +1013,7 @@ var partner = (function () {
         fail(err.message || "We couldn't send your details. Please try again.");
         if (widget) { widget.api.reset(widget.id); token = ''; }
       }).then(function () {
+        refId = newRefId(); // a retry on this page is a new lead
         button.disabled = false;
         if (loader) loader.style.display = 'none';
       });

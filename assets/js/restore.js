@@ -449,18 +449,8 @@ var attribution = (function () {
   };
 })();
 
-// Ref id shown to the customer only inside the WhatsApp message, e.g. MQ-7K3F9X. No 0/O/1/I.
+// Number the non-WhatsApp-form thank-you button opens.
 var WA_NUMBER = '60187771095';
-function newRefId() {
-  var letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ', digits = '23456789', chars = letters + digits;
-  var r = crypto.getRandomValues(new Uint8Array(8)), out = [];
-  for (var i = 0; i < 6; i++) out.push(chars[r[i] % chars.length]);
-  // Always a mix: if all six came out the same kind, swap one for the other kind.
-  var s = out.join('');
-  if (!/\d/.test(s)) out[r[6] % 6] = digits[r[7] % digits.length];
-  else if (!/[A-Z]/.test(s)) out[r[6] % 6] = letters[r[7] % letters.length];
-  return 'MQ-' + out.join('');
-}
 
 // Sales-partner codes (?salespartner=, ?maqo=, ?referer=) from a partner's link. Kept for
 // 30 days from the latest link that carries one, so the lead still credits the partner after
@@ -552,7 +542,7 @@ var partner = (function () {
   });
 
   // The prefilled WhatsApp message: the visible fields as "Label: value" lines.
-  function whatsappText(meta, values, refId) {
+  function whatsappText(meta, values) {
     var lines = ["Hi Maqo Solar, I'd like a free solar quotation. My details:"];
     meta.fields.forEach(function (f) {
       var v = values[f.id];
@@ -560,7 +550,6 @@ var partner = (function () {
       v = Array.isArray(v) ? v.join(', ') : v;
       lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (v || '-'));
     });
-    if (refId) lines.push('Ref: ' + refId); // added when sent, not in the preview; respond.io matches it to the Lark row
     return lines.join('\n');
   }
 
@@ -943,11 +932,10 @@ var partner = (function () {
         if (spin) spin.style.display = '';
       }
       var attr = attribution();
-      var refId = newRefId();
       // WhatsApp forms: after the lead is saved (Lark + Supabase), open WhatsApp with the details.
       // It opens even if saving failed, so the visitor can still reach us there.
       var toWhatsapp = function () {
-        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values, refId)); };
+        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values)); };
         // Report the Lead before leaving, but never hold the visitor more than a second.
         Promise.race([window.__maqoTrackLead(root.id, attr.fbEventId), new Promise(function (r) { setTimeout(r, 1000); })]).then(go, go);
       };
@@ -962,7 +950,6 @@ var partner = (function () {
             fields: values,
             files: uploads,
             attribution: attr,
-            refId: refId,
             partner: partner.all(),
             landingPageSource: location.origin + location.pathname,
             phoneCountry: (function () {
@@ -987,7 +974,7 @@ var partner = (function () {
             throw new Error(out.error || '');
           });
         }
-        // Test flow: no redirect; the WhatsApp message carries refId so respond.io can match it to this lead.
+        // No redirect: offer the WhatsApp chat; the lead is matched to the WhatsApp sender by phone number.
         window.__maqoTrackLead(root.id, attr.fbEventId);
         var wrap = root.querySelector('.ghl-form-wrap') || root;
         var thanks = document.createElement('div');
@@ -1000,7 +987,7 @@ var partner = (function () {
         wa.target = '_blank';
         wa.rel = 'noopener';
         wa.textContent = 'Chat on WhatsApp';
-        wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent("Hi Maqo, I'd like a solar quote. (Ref: " + refId + ')');
+        wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent("Hi Maqo, I'd like a solar quote.");
         thanks.appendChild(msg);
         thanks.appendChild(wa);
         wrap.innerHTML = '';

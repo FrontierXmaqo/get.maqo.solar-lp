@@ -14,6 +14,7 @@
 //   SUPABASE_ANON_KEY     also saved to the landing page CMS tables (atap_leads, ci_leads).
 //                         Those tables let the anon role insert only; staff read them in the CMS.
 
+import { randomInt } from 'node:crypto';
 import forms from './_forms.json' with { type: 'json' };
 import { buildLeadWebhookPayload, buildCiLeadWebhookPayload, buildCareerWebhookPayload } from './_webhookTemplate.js';
 
@@ -52,6 +53,18 @@ const F = {
   maqo: '1RB2AqI58o9oUEV6TGAu',
   referer: 'vTUlK7SiiZPHrs4hGfxW',
 };
+
+// "MQ-" plus 6 characters, always a mix of letters and digits; no 0/O/1/I so it reads cleanly in Lark.
+const REF_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const REF_DIGITS = '23456789';
+function newRefId() {
+  const all = REF_LETTERS + REF_DIGITS;
+  const chars = Array.from({ length: 6 }, () => all[randomInt(all.length)]);
+  const s = chars.join('');
+  if (!/\d/.test(s)) chars[randomInt(6)] = REF_DIGITS[randomInt(REF_DIGITS.length)];
+  else if (!/[A-Z]/.test(s)) chars[randomInt(6)] = REF_LETTERS[randomInt(REF_LETTERS.length)];
+  return 'MQ-' + chars.join('');
+}
 
 const MAX_FIELD_LENGTH = 200;
 const MAX_MESSAGE_LENGTH = 5000;
@@ -415,12 +428,10 @@ export default async function handler(req, res) {
   const envVar = testMode ? 'TESTING_WEBHOOK_URL' : WEBHOOK_ENV[kind];
   console.log(`Lead (${kind}, ${body.formId}) -> ${envVar}`);
 
-  // Ref id made in the browser; the WhatsApp message repeats it. Lark starts the row as
-  // "Empty Lead" and flips it to "New Lead" when respond.io receives the same ref id.
-  if (/^MQ-[A-HJ-NP-Z2-9]{6}$/.test(body.refId)) {
-    payload.ref_id = body.refId;
-    payload.lead_status = 'Empty Lead';
-  }
+  // Internal ref id for the Lark row; never shown to the visitor. Lark starts the row as
+  // "Empty Lead"; it becomes "New Lead" when the same phone number messages us on WhatsApp.
+  payload.ref_id = newRefId();
+  payload.lead_status = 'Empty Lead';
 
   const webhookOk = await forwardToWebhook(envVar, payload);
 

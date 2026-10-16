@@ -560,7 +560,7 @@ var partner = (function () {
       v = Array.isArray(v) ? v.join(', ') : v;
       lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (v || '-'));
     });
-    lines.push('Ref: ' + (refId || 'MQ-XXXXXX')); // respond.io matches this to the Lark row
+    if (refId) lines.push('Ref: ' + refId); // added when sent, not in the preview; respond.io matches it to the Lark row
     return lines.join('\n');
   }
 

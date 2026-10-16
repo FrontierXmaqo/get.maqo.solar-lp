@@ -10,8 +10,6 @@
 //   TESTING_WEBHOOK_URL   every lead goes here instead when the browser has the
 //                         cookie test_webhook=1 (set by visiting ?test_webhook=1)
 //   TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret; checks are skipped when unset
-//   LARK_REF_WEBHOOK_URL      every submission is also posted here with its refId (status "Empty Lead")
-//                         so Lark can later flip it to "New Lead" when respond.io sees the same refId.
 //   SUPABASE_URL          Supabase project URL. With SUPABASE_ANON_KEY, every real lead is
 //   SUPABASE_ANON_KEY     also saved to the landing page CMS tables (atap_leads, ci_leads).
 //                         Those tables let the anon role insert only; staff read them in the CMS.
@@ -417,26 +415,14 @@ export default async function handler(req, res) {
   const envVar = testMode ? 'TESTING_WEBHOOK_URL' : WEBHOOK_ENV[kind];
   console.log(`Lead (${kind}, ${body.formId}) -> ${envVar}`);
 
-  const webhookOk = await forwardToWebhook(envVar, payload);
-
-  // Ref id from the browser; the WhatsApp message repeats it. Best effort: never fails the lead.
-  const refId = /^MQ-[A-HJ-NP-Z2-9]{6}$/.test(body.refId) ? body.refId : '';
-  if (refId) {
-    const list = (x) => [].concat(x || '').join(', ');
-    await forwardToWebhook('LARK_REF_WEBHOOK_URL', {
-      ref_id: refId, status: 'Empty Lead', created_at: new Date().toISOString(),
-      name: common.fullName, salutation: common.salutation, phone: common.phone, email: common.email,
-      state: common.state, country: common.country, timezone: common.timezone,
-      form_id: body.formId, kind, source_page: common.sourcePage, page: common.landingPageSource,
-      property_type: v[F.propertyType] || '', electric_supply: v[F.electricSupply] || '',
-      monthly_bill: list(v[F.resiBill] || v[F.ciBill] || v[F.bessBill]), preferred_language: v[F.language] || '',
-      company_name: v[F.companyName] || '', industry: list(v[F.industry]), role: list(v[F.role]),
-      session_source: common.sessionSource, referrer: common.sourceOfLeads, landing_url: common.attributionUrl,
-      campaign_id: common.campaignId, utm_source: common.utmSource, utm_medium: common.utmMedium,
-      utm_campaign: common.utmCampaign, utm_term: common.utmTerm, utm_content: common.utmContent,
-      gclid: common.gclid, fbclid: common.fbclid, salespartner: common.salespartner, maqo: common.maqo, referer: common.referer,
-    });
+  // Ref id made in the browser; the WhatsApp message repeats it. Lark starts the row as
+  // "Empty Lead" and flips it to "New Lead" when respond.io receives the same ref id.
+  if (/^MQ-[A-HJ-NP-Z2-9]{6}$/.test(body.refId)) {
+    payload.ref_id = body.refId;
+    payload.lead_status = 'Empty Lead';
   }
+
+  const webhookOk = await forwardToWebhook(envVar, payload);
 
   // Real leads are also kept in the CMS database, so a failed webhook doesn't lose them.
   // Test-mode leads stay out of it. extra_fields records what the CMS has no column for.

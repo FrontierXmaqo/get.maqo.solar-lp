@@ -542,7 +542,7 @@ var partner = (function () {
   });
 
   // The prefilled WhatsApp message: the visible fields as "Label: value" lines.
-  function whatsappText(meta, values) {
+  function whatsappText(meta, values, refId) {
     var lines = ["Hi Maqo Solar, I'd like a free solar quotation. My details:"];
     meta.fields.forEach(function (f) {
       var v = values[f.id];
@@ -550,6 +550,7 @@ var partner = (function () {
       v = Array.isArray(v) ? v.join(', ') : v;
       lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (v || '-'));
     });
+    if (refId) lines.push('Ref: ' + refId); // from the server; left out of the preview box, respond.io matches it to the Lark row
     return lines.join('\n');
   }
 
@@ -932,10 +933,11 @@ var partner = (function () {
         if (spin) spin.style.display = '';
       }
       var attr = attribution();
+      var refId = '';
       // WhatsApp forms: after the lead is saved (Lark + Supabase), open WhatsApp with the details.
       // It opens even if saving failed, so the visitor can still reach us there.
       var toWhatsapp = function () {
-        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values)); };
+        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values, refId)); };
         // Report the Lead before leaving, but never hold the visitor more than a second.
         Promise.race([window.__maqoTrackLead(root.id, attr.fbEventId), new Promise(function (r) { setTimeout(r, 1000); })]).then(go, go);
       };
@@ -965,33 +967,32 @@ var partner = (function () {
           })
         });
       }).then(function (res) {
-        if (meta.whatsapp) {
-          if (!res.ok) console.warn('Lead not saved', res.status);
-          return toWhatsapp();
-        }
-        if (!res.ok) {
-          return res.json().catch(function () { return {}; }).then(function (out) {
-            throw new Error(out.error || '');
-          });
-        }
-        // No redirect: offer the WhatsApp chat; the lead is matched to the WhatsApp sender by phone number.
-        window.__maqoTrackLead(root.id, attr.fbEventId);
-        var wrap = root.querySelector('.ghl-form-wrap') || root;
-        var thanks = document.createElement('div');
-        thanks.className = 'restore-thankyou';
-        thanks.setAttribute('role', 'status');
-        var msg = document.createElement('p');
-        msg.textContent = 'Thank you! One last step: tap below and send us the WhatsApp message so we can follow up.';
-        var wa = document.createElement('a');
-        wa.className = 'restore-wa';
-        wa.target = '_blank';
-        wa.rel = 'noopener';
-        wa.textContent = 'Chat on WhatsApp';
-        wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent("Hi Maqo, I'd like a solar quote.");
-        thanks.appendChild(msg);
-        thanks.appendChild(wa);
-        wrap.innerHTML = '';
-        wrap.appendChild(thanks);
+        // The server makes the ref id and sends it back; it goes into the WhatsApp message only.
+        return res.json().catch(function () { return {}; }).then(function (out) {
+          if (res.ok) refId = out.refId || '';
+          if (meta.whatsapp) {
+            if (!res.ok) console.warn('Lead not saved', res.status);
+            return toWhatsapp();
+          }
+          if (!res.ok) throw new Error(out.error || '');
+          window.__maqoTrackLead(root.id, attr.fbEventId);
+          var wrap = root.querySelector('.ghl-form-wrap') || root;
+          var thanks = document.createElement('div');
+          thanks.className = 'restore-thankyou';
+          thanks.setAttribute('role', 'status');
+          var msg = document.createElement('p');
+          msg.textContent = 'Thank you! One last step: tap below and send us the WhatsApp message so we can follow up.';
+          var wa = document.createElement('a');
+          wa.className = 'restore-wa';
+          wa.target = '_blank';
+          wa.rel = 'noopener';
+          wa.textContent = 'Chat on WhatsApp';
+          wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent("Hi Maqo, I'd like a solar quote." + (refId ? '\nRef: ' + refId : ''));
+          thanks.appendChild(msg);
+          thanks.appendChild(wa);
+          wrap.innerHTML = '';
+          wrap.appendChild(thanks);
+        });
       }).catch(function (err) {
         if (meta.whatsapp) return toWhatsapp();
         fail(err.message || "We couldn't send your details. Please try again.");

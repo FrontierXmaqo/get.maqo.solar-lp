@@ -428,9 +428,10 @@ export default async function handler(req, res) {
   const envVar = testMode ? 'TESTING_WEBHOOK_URL' : WEBHOOK_ENV[kind];
   console.log(`Lead (${kind}, ${body.formId}) -> ${envVar}`);
 
-  // Internal ref id for the Lark row; never shown to the visitor. Lark starts the row as
-  // "Empty Lead"; it becomes "New Lead" when the same phone number messages us on WhatsApp.
-  payload.ref_id = newRefId();
+  // Ref id for the Lark row. It goes back to the browser, which puts it in the WhatsApp message so
+  // respond.io can match it. Lark starts the row as "Empty Lead" and it becomes "New Lead" then.
+  const refId = newRefId();
+  payload.ref_id = refId;
   payload.lead_status = 'Empty Lead';
 
   const webhookOk = await forwardToWebhook(envVar, payload);
@@ -475,5 +476,5 @@ export default async function handler(req, res) {
   if (!webhookOk && !saved) {
     return res.status(502).json({ error: "We couldn't send your details. Please try again." });
   }
-  return res.status(200).json({ ok: true });
+  return res.status(200).json({ ok: true, refId });
 }

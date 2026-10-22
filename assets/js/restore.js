@@ -454,6 +454,10 @@ var WA_NUMBER = '60187771095';
 
 // A residential sales link's emoji pair (malaysia/ref/ref.js), ended onto WhatsApp messages; '' elsewhere.
 function refSig() { return window.__maqoRef && window.__maqoRef.sig ? ' ' + window.__maqoRef.sig : ''; }
+// wa.me's redirect garbles emoji (shows ��), so a message carrying the pair goes straight to api.whatsapp.com.
+function waHref(number, text) {
+  return (refSig() ? 'https://api.whatsapp.com/send?phone=' + number + '&text=' : 'https://wa.me/' + number + '?text=') + encodeURIComponent(text);
+}
 
 // Sales-partner codes (?salespartner=, ?maqo=, ?referer=) from a partner's link. Kept for
 // 30 days from the latest link that carries one, so the lead still credits the partner after
@@ -939,7 +943,7 @@ var partner = (function () {
       // WhatsApp forms: after the lead is saved (Lark + Supabase), open WhatsApp with the details.
       // It opens even if saving failed, so the visitor can still reach us there.
       var toWhatsapp = function () {
-        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values)); };
+        var go = function () { location.href = waHref(meta.whatsapp, whatsappText(meta, values)); };
         // Report the Lead before leaving, but never hold the visitor more than a second.
         Promise.race([window.__maqoTrackLead(root.id, attr.fbEventId), new Promise(function (r) { setTimeout(r, 1000); })]).then(go, go);
       };
@@ -988,7 +992,7 @@ var partner = (function () {
           wa.target = '_blank';
           wa.rel = 'noopener';
           wa.textContent = 'Chat on WhatsApp';
-          wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent("Hi Maqo, I'd like a solar quote." + refSig());
+          wa.href = waHref(WA_NUMBER, "Hi Maqo, I'd like a solar quote." + refSig());
           thanks.appendChild(msg);
           thanks.appendChild(wa);
           wrap.innerHTML = '';

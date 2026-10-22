@@ -28,7 +28,8 @@
     document.querySelectorAll('a[href*="wa.me/"]').forEach(function (a) {
       var url = new URL(a.href);
       var text = url.searchParams.get('text') || DEFAULT_TEXT;
-      a.href = 'https://wa.me' + url.pathname + '?text=' + encodeURIComponent(text + ' ' + person.emoji_signature);
+      // wa.me's redirect garbles emoji (shows ��), so go straight to the page it redirects to.
+      a.href = 'https://api.whatsapp.com/send?phone=' + url.pathname.replace(/\D/g, '') + '&text=' + encodeURIComponent(text + ' ' + person.emoji_signature);
     });
   }).catch(function () { /* no config: messages stay as they are */ });
 })();

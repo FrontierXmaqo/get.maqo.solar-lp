@@ -541,8 +541,8 @@ var partner = (function () {
     document.head.appendChild(s);
   });
 
-  // Ref id for this form view, e.g. MQ-7K3F9X: always a mix of letters and digits, no 0/O/1/I. It is the
-  // first line of the WhatsApp message so respond.io can match it to the Lark row; api/submit.js checks it.
+  // Ref id for this form view, e.g. MQ-7K3F9X: always a mix of letters and digits, no 0/O/1/I. It goes,
+  // invisibly (hiddenRef), into the WhatsApp message so Make can match the chat to the Lark row; api/submit.js checks it.
   function newRefId() {
     var letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ', digits = '23456789', chars = letters + digits;
     var r = crypto.getRandomValues(new Uint8Array(8)), out = [];
@@ -553,11 +553,20 @@ var partner = (function () {
     return 'MQ-' + out.join('');
   }
 
-  // The prefilled WhatsApp message: the ref id first, then the visible fields as "Label: value" lines.
+  // The ref id as invisible characters, so the customer never sees it: each of the 6 characters after
+  // "MQ-" is its 5-bit position in REF_CHARS, U+200B for 0 and U+200C for 1 (Make decodes it, see
+  // docs/referral/MAKE_REF_ID.md). It goes right after "Hi", where customers rarely edit.
+  var REF_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function hiddenRef(refId) {
+    return (refId || '').slice(3).split('').map(function (c) {
+      return ('0000' + REF_CHARS.indexOf(c).toString(2)).slice(-5).replace(/0/g, '\u200B').replace(/1/g, '\u200C');
+    }).join('');
+  }
+
+  // The prefilled WhatsApp message: the visible fields as "Label: value" lines, the ref id hidden in "Hi".
   function whatsappText(meta, values, refId) {
     var lines = [];
-    if (refId) lines.push('Ref: ' + refId);
-    lines.push("Hi Maqo Solar, I'd like a free solar quotation. My details:");
+    lines.push('Hi' + hiddenRef(refId) + " Maqo Solar, I'd like a free solar quotation. My details:");
     meta.fields.forEach(function (f) {
       var v = values[f.id];
       if (f.hidden || f.type === 'file_upload') return;
@@ -1003,7 +1012,7 @@ var partner = (function () {
           wa.target = '_blank';
           wa.rel = 'noopener';
           wa.textContent = 'Chat on WhatsApp';
-          wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent((refId ? 'Ref: ' + refId + '\n' : '') + "Hi Maqo, I'd like a solar quote.");
+          wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent('Hi' + hiddenRef(refId) + " Maqo, I'd like a solar quote.");
           thanks.appendChild(msg);
           thanks.appendChild(wa);
           wrap.innerHTML = '';

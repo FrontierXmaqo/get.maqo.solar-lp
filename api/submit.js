@@ -16,6 +16,7 @@
 
 import { randomInt } from 'node:crypto';
 import forms from './_forms.json' with { type: 'json' };
+import salespeople from '../malaysia/ref/salespeople.json' with { type: 'json' };
 import { buildLeadWebhookPayload, buildCiLeadWebhookPayload, buildCareerWebhookPayload } from './_webhookTemplate.js';
 
 // Which workflow each form belongs to. Forms not listed are residential.
@@ -432,6 +433,11 @@ export default async function handler(req, res) {
   // "Empty Lead" and it becomes "New Lead" then.
   payload.ref_id = newRefId();
   payload.lead_status = 'Empty Lead';
+  // Residential sales-link code (malaysia/ref/ref.js); only a code in the config is passed on.
+  if (kind === 'resi') {
+    const refCode = String(body.refCode || '').toUpperCase();
+    payload.ref_code = salespeople.some((p) => p.code === refCode) ? refCode : '';
+  }
 
   const webhookOk = await forwardToWebhook(envVar, payload);
 

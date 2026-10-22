@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Sales Link Generator</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 0; padding: 24px 16px; background: #f6f7f6; color: #111; }
+  main { max-width: 900px; margin: 0 auto; }
+  label { display: block; font-weight: 600; margin-bottom: 4px; }
+  #base { width: 100%; max-width: 480px; padding: 8px; font: inherit; box-sizing: border-box; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 20px; }
+  .card { background: #fff; border: 1px solid #dde3dd; border-radius: 10px; padding: 16px; }
+  .card h2 { font-size: 16px; margin: 0 0 4px; }
+  .link { word-break: break-all; font-size: 13px; color: #333; margin: 8px 0; }
+  .qr { margin: 8px 0; }
+  .qr img, .qr canvas { width: 180px; height: 180px; }
+  button, a.btn { font: inherit; padding: 6px 12px; border: 1px solid #40b344; background: #40b344; color: #fff; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; margin-right: 6px; }
+  #error { color: #b00020; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Residential sales links</h1>
+  <label for="base">Base URL</label>
+  <input id="base" type="url">
+  <p id="error" role="alert"></p>
+  <div class="grid" id="grid"></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function () {
+  var base = document.getElementById('base');
+  var grid = document.getElementById('grid');
+  var people = [];
+  base.value = location.origin;
+
+  function render() {
+    var root = base.value.trim().replace(/\/+$/, '');
+    grid.innerHTML = '';
+    people.forEach(function (p) {
+      var url = root + '/?r=' + p.code;
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = '<h2></h2><div></div><div class="link"></div><div class="qr"></div>' +
+        '<button type="button">Copy link</button><a class="btn">Download QR</a>';
+      card.querySelector('h2').textContent = p.code + ' · ' + p.display_name;
+      card.children[1].textContent = 'Signature: ' + p.emoji_signature;
+      card.querySelector('.link').textContent = url;
+      new QRCode(card.querySelector('.qr'), { text: url, width: 360, height: 360, correctLevel: QRCode.CorrectLevel.M });
+      var copy = card.querySelector('button');
+      copy.addEventListener('click', function () {
+        navigator.clipboard.writeText(url).then(function () { copy.textContent = 'Copied'; }, function () { prompt('Copy this link', url); });
+      });
+      var dl = card.querySelector('a');
+      dl.download = 'maqo-' + p.code + '-qr.png';
+      dl.addEventListener('click', function () { dl.href = card.querySelector('.qr canvas').toDataURL('image/png'); });
+      grid.appendChild(card);
+    });
+  }
+
+  base.addEventListener('input', render);
+  fetch('salespeople.json').then(function (r) { return r.json(); }).then(function (list) {
+    people = list;
+    render();
+  }).catch(function () { document.getElementById('error').textContent = "Couldn't load salespeople.json."; });
+})();
+</script>
+</body>
+</html>

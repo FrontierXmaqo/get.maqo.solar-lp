@@ -452,6 +452,9 @@ var attribution = (function () {
 // Number the non-WhatsApp-form thank-you button opens.
 var WA_NUMBER = '60187771095';
 
+// A residential sales link's emoji pair (malaysia/ref/ref.js), ended onto WhatsApp messages; '' elsewhere.
+function refSig() { return window.__maqoRef && window.__maqoRef.sig ? ' ' + window.__maqoRef.sig : ''; }
+
 // Sales-partner codes (?salespartner=, ?maqo=, ?referer=) from a partner's link. Kept for
 // 30 days from the latest link that carries one, so the lead still credits the partner after
 // the visitor moves to another page, and sent with every form, including the residential
@@ -551,7 +554,7 @@ var partner = (function () {
       v = Array.isArray(v) ? v.join(', ') : v;
       lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (v || '-'));
     });
-    return lines.join('\n');
+    return lines.join('\n') + refSig();
   }
 
   function whenReady(test, fn, tries) {
@@ -952,6 +955,7 @@ var partner = (function () {
             files: uploads,
             attribution: attr,
             partner: partner.all(),
+            refCode: (window.__maqoRef || {}).code || '',
             landingPageSource: location.origin + location.pathname,
             phoneCountry: (function () {
               for (var id in getters) if (getters[id].country) return getters[id].country();
@@ -984,7 +988,7 @@ var partner = (function () {
           wa.target = '_blank';
           wa.rel = 'noopener';
           wa.textContent = 'Chat on WhatsApp';
-          wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent("Hi Maqo, I'd like a solar quote.");
+          wa.href = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent("Hi Maqo, I'd like a solar quote." + refSig());
           thanks.appendChild(msg);
           thanks.appendChild(wa);
           wrap.innerHTML = '';

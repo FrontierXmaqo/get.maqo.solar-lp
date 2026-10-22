@@ -1,5 +1,7 @@
 # Test checklist: residential sales links
 
+> **Superseded.** The emoji pair is no longer added to WhatsApp messages. Routing now uses the Ref Code (`ref_code`) saved in Lark, and the chat is matched to the Lark row by the `Ref: MQ-XXXXXX` first line of the WhatsApp message. Kept for reference only.
+
 `<preview>` is the branch preview URL. Use a **private/incognito window for every code**: the
 first valid code is kept for 30 days in the browser, so a second code in the same window won't
 change anything (by design).

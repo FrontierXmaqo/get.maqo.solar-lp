@@ -43,10 +43,9 @@
       var url = root + '/?r=' + p.code;
       var card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML = '<h2></h2><div></div><div class="link"></div><div class="qr"></div>' +
+      card.innerHTML = '<h2></h2><div class="link"></div><div class="qr"></div>' +
         '<button type="button">Copy link</button><a class="btn">Download QR</a>';
       card.querySelector('h2').textContent = p.code + ' · ' + p.display_name;
-      card.children[1].textContent = 'Signature: ' + p.emoji_signature;
       card.querySelector('.link').textContent = url;
       new QRCode(card.querySelector('.qr'), { text: url, width: 360, height: 360, correctLevel: QRCode.CorrectLevel.M });
       var copy = card.querySelector('button');

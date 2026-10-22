@@ -2,61 +2,56 @@
   {
     "code": "S01",
     "display_name": "SALES_A",
-    "respondio_user_label": "SALES_A",
-    "emoji_signature": "☀️⚡"
+    "respondio_user_label": "SALES_A"
   },
   {
     "code": "S02",
     "display_name": "SALES_B",
-    "respondio_user_label": "SALES_B",
-    "emoji_signature": "☀️⭐"
+    "respondio_user_label": "SALES_B"
   },
   {
     "code": "S03",
     "display_name": "SALES_C",
-    "respondio_user_label": "SALES_C",
-    "emoji_signature": "☀️✅"
+    "respondio_user_label": "SALES_C"
   },
   {
     "code": "S04",
     "display_name": "SALES_D",
-    "respondio_user_label": "SALES_D",
-    "emoji_signature": "☀️✨"
+    "respondio_user_label": "SALES_D"
   },
   {
     "code": "S05",
     "display_name": "SALES_E",
-    "respondio_user_label": "SALES_E",
-    "emoji_signature": "☀️⛅"
+    "respondio_user_label": "SALES_E"
   },
   {
     "code": "S06",
     "display_name": "SALES_F",
-    "respondio_user_label": "SALES_F",
-    "emoji_signature": "☀️⚽"
+    "respondio_user_label": "SALES_F"
   },
   {
     "code": "S07",
     "display_name": "SALES_G",
-    "respondio_user_label": "SALES_G",
-    "emoji_signature": "☀️☕"
+    "respondio_user_label": "SALES_G"
   },
   {
     "code": "S08",
     "display_name": "SALES_H",
-    "respondio_user_label": "SALES_H",
-    "emoji_signature": "☀️⛳"
+    "respondio_user_label": "SALES_H"
   },
   {
     "code": "S09",
     "display_name": "SALES_I",
-    "respondio_user_label": "SALES_I",
-    "emoji_signature": "☀️⏰"
+    "respondio_user_label": "SALES_I"
   },
   {
     "code": "S10",
     "display_name": "SALES_J",
-    "respondio_user_label": "SALES_J",
-    "emoji_signature": "☀️⌚"
+    "respondio_user_label": "SALES_J"
+  },
+  {
+    "code": "T00",
+    "display_name": "TEST",
+    "respondio_user_label": "TEST"
   }
 ]

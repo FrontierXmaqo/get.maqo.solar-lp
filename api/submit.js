@@ -429,9 +429,11 @@ export default async function handler(req, res) {
   const envVar = testMode ? 'TESTING_WEBHOOK_URL' : WEBHOOK_ENV[kind];
   console.log(`Lead (${kind}, ${body.formId}) -> ${envVar}`);
 
-  // Ref id for the Lark row, made here only; the browser never sees it. Lark starts the row as
-  // "Empty Lead" and it becomes "New Lead" then.
-  payload.ref_id = newRefId();
+  // Ref id for the Lark row. It goes back to the browser, which puts it in the WhatsApp message so
+  // respond.io can match it. Lark starts the row as "Empty Lead" and it becomes "New Lead" then.
+  // The browser makes the id so it can show it in the WhatsApp preview; a missing or odd one is replaced.
+  const refId = /^MQ-[A-HJ-NP-Z2-9]{6}$/.test(body.refId) ? body.refId : newRefId();
+  payload.ref_id = refId;
   payload.lead_status = 'Empty Lead';
   // Residential sales-link code (malaysia/ref/ref.js); only a code in the config is passed on.
   if (kind === 'resi') {
@@ -481,5 +483,5 @@ export default async function handler(req, res) {
   if (!webhookOk && !saved) {
     return res.status(502).json({ error: "We couldn't send your details. Please try again." });
   }
-  return res.status(200).json({ ok: true });
+  return res.status(200).json({ ok: true, refId });
 }

@@ -1,5 +1,7 @@
 # respond.io Workflow: residential sales links
 
+> **Superseded.** The emoji pair is no longer added to WhatsApp messages. Routing now uses the Ref Code (`ref_code`) saved in Lark, and the chat is matched to the Lark row by the `Ref: MQ-XXXXXX` first line of the WhatsApp message. Kept for reference only.
+
 Every WhatsApp message from a residential page opened through a sales link (`/?r=S02`) ends
 with that salesperson's emoji pair, for example `… ☀️⭐`. This workflow reads the pair from the
 first message and assigns the conversation to that salesperson.

@@ -20,16 +20,16 @@ For each row, in a fresh private window:
 
 | Code | Open | Message must end with | respond.io user | Referrer | Tag |
 |---|---|---|---|---|---|
-| S01 | `<preview>/?r=S01` | ☀️🔋 | SALES_A | S01 | ref-S01 |
-| S02 | `<preview>/?r=S02` | ☀️🌿 | SALES_B | S02 | ref-S02 |
-| S03 | `<preview>/?r=S03` | ☀️🏡 | SALES_C | S03 | ref-S03 |
-| S04 | `<preview>/?r=S04` | ☀️🌊 | SALES_D | S04 | ref-S04 |
-| S05 | `<preview>/?r=S05` | ☀️🍀 | SALES_E | S05 | ref-S05 |
-| S06 | `<preview>/?r=S06` | ☀️🌈 | SALES_F | S06 | ref-S06 |
-| S07 | `<preview>/?r=S07` | ☀️🔆 | SALES_G | S07 | ref-S07 |
-| S08 | `<preview>/?r=S08` | ☀️🌻 | SALES_H | S08 | ref-S08 |
-| S09 | `<preview>/?r=S09` | ☀️🐝 | SALES_I | S09 | ref-S09 |
-| S10 | `<preview>/?r=S10` | ☀️💡 | SALES_J | S10 | ref-S10 |
+| S01 | `<preview>/?r=S01` | ☀️⚡ | SALES_A | S01 | ref-S01 |
+| S02 | `<preview>/?r=S02` | ☀️⭐ | SALES_B | S02 | ref-S02 |
+| S03 | `<preview>/?r=S03` | ☀️✅ | SALES_C | S03 | ref-S03 |
+| S04 | `<preview>/?r=S04` | ☀️✨ | SALES_D | S04 | ref-S04 |
+| S05 | `<preview>/?r=S05` | ☀️⛅ | SALES_E | S05 | ref-S05 |
+| S06 | `<preview>/?r=S06` | ☀️⚽ | SALES_F | S06 | ref-S06 |
+| S07 | `<preview>/?r=S07` | ☀️☕ | SALES_G | S07 | ref-S07 |
+| S08 | `<preview>/?r=S08` | ☀️⛳ | SALES_H | S08 | ref-S08 |
+| S09 | `<preview>/?r=S09` | ☀️⏰ | SALES_I | S09 | ref-S09 |
+| S10 | `<preview>/?r=S10` | ☀️⌚ | SALES_J | S10 | ref-S10 |
 
 - [ ] Home page (`/`): nav **Contact Us** ends with the pair.
 - [ ] Home page: footer **Tel: 6018-777 1095** ends with the pair.
@@ -58,27 +58,27 @@ For each row, in a fresh private window:
 
 ## 4. Case-insensitive code
 
-- [ ] Fresh window, `<preview>/?r=s03` → messages end with ☀️🏡.
+- [ ] Fresh window, `<preview>/?r=s03` → messages end with ☀️✅.
 
 ## 5. Expired code
 
 - [ ] Fresh window, open `<preview>/?r=S02`, then in DevTools → Console run:
       `localStorage.setItem('maqo_ref', JSON.stringify({code:'S02', at: Date.now() - 31*86400000}))`
 - [ ] Reload `<preview>/` (no `?r=`) → messages are clean.
-- [ ] Open `<preview>/?r=S04` → messages end with ☀️🌊 (the expired code no longer blocks a new one).
+- [ ] Open `<preview>/?r=S04` → messages end with ☀️✨ (the expired code no longer blocks a new one).
 
 ## 6. First code wins
 
-- [ ] Fresh window, open `<preview>/?r=S01`, then `<preview>/?r=S02` → messages still end with ☀️🔋.
+- [ ] Fresh window, open `<preview>/?r=S01`, then `<preview>/?r=S02` → messages still end with ☀️⚡.
 
 ## 7. Customer edits the text but keeps the emoji
 
 - [ ] Fresh window `<preview>/?r=S05` → tap **Contact Us** → in WhatsApp, change the words but
-      leave ☀️🍀 at the end → send → assigned to SALES_E, Referrer S05, tag `ref-S05`.
+      leave ☀️⛅ at the end → send → assigned to SALES_E, Referrer S05, tag `ref-S05`.
 
 ## 8. Customer deletes the emoji
 
-- [ ] Fresh window `<preview>/?r=S06` → **Contact Us** → delete ☀️🌈 → send → existing assignment
+- [ ] Fresh window `<preview>/?r=S06` → **Contact Us** → delete ☀️⚽ → send → existing assignment
       (Else), Referrer empty. Expected: without the emoji the chat can't be attributed.
 
 ## 9. Returning contact (first touch wins)
@@ -90,7 +90,7 @@ For each row, in a fresh private window:
 ## 10. Storage blocked
 
 - [ ] Chrome → Settings → block all cookies and site data for the preview domain → open
-      `<preview>/?r=S08` → the page works and the messages end with ☀️🌻 (not remembered after
+      `<preview>/?r=S08` → the page works and the messages end with ☀️⛳ (not remembered after
       leaving the page).
 
 ## 11. C&I and other pages are unchanged

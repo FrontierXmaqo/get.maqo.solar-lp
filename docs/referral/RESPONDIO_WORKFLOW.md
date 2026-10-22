@@ -1,7 +1,7 @@
 # respond.io Workflow: residential sales links
 
 Every WhatsApp message from a residential page opened through a sales link (`/?r=S02`) ends
-with that salesperson's emoji pair, for example `… ☀️🌿`. This workflow reads the pair from the
+with that salesperson's emoji pair, for example `… ☀️⭐`. This workflow reads the pair from the
 first message and assigns the conversation to that salesperson.
 
 Anything marked **[verify]** was not confirmed in respond.io's help docs. Check it in the
@@ -14,16 +14,16 @@ real names there, and use the same pairs below.
 
 | Code | respond.io user | Emoji pair | Tag |
 |---|---|---|---|
-| S01 | SALES_A | ☀️🔋 | `ref-S01` |
-| S02 | SALES_B | ☀️🌿 | `ref-S02` |
-| S03 | SALES_C | ☀️🏡 | `ref-S03` |
-| S04 | SALES_D | ☀️🌊 | `ref-S04` |
-| S05 | SALES_E | ☀️🍀 | `ref-S05` |
-| S06 | SALES_F | ☀️🌈 | `ref-S06` |
-| S07 | SALES_G | ☀️🔆 | `ref-S07` |
-| S08 | SALES_H | ☀️🌻 | `ref-S08` |
-| S09 | SALES_I | ☀️🐝 | `ref-S09` |
-| S10 | SALES_J | ☀️💡 | `ref-S10` |
+| S01 | SALES_A | ☀️⚡ | `ref-S01` |
+| S02 | SALES_B | ☀️⭐ | `ref-S02` |
+| S03 | SALES_C | ☀️✅ | `ref-S03` |
+| S04 | SALES_D | ☀️✨ | `ref-S04` |
+| S05 | SALES_E | ☀️⛅ | `ref-S05` |
+| S06 | SALES_F | ☀️⚽ | `ref-S06` |
+| S07 | SALES_G | ☀️☕ | `ref-S07` |
+| S08 | SALES_H | ☀️⛳ | `ref-S08` |
+| S09 | SALES_I | ☀️⏰ | `ref-S09` |
+| S10 | SALES_J | ☀️⌚ | `ref-S10` |
 
 Copy each pair from this table or from the JSON file. Don't retype it: `☀️` is two characters
 (U+2600 and U+FE0F), and a sun typed without the second one won't match.
@@ -87,7 +87,7 @@ Under the **Else** of `Already referred?`:
 2. **Branch 1**, named `S01`:
    - Category: **Last Incoming Message**.
    - Operator: **Contains** **[verify: operator label]**.
-   - Value: `☀️🔋` (paste it).
+   - Value: `☀️⚡` (paste it).
 3. Click **Add Branch** and repeat for S02 to S09. One branch per salesperson. The step allows at
    most **9 branches plus Else**.
 
@@ -105,7 +105,7 @@ Under **each** branch S01 to S09, add these three steps in order:
 The Branch step is full at 9 branches, so:
 
 1. On the **Else** of `Sales link emoji`, click **+ → Branch**. Name it `Sales link emoji 2`.
-2. **Branch 1**, named `S10`: **Last Incoming Message** · **Contains** · `☀️💡`.
+2. **Branch 1**, named `S10`: **Last Incoming Message** · **Contains** · `☀️⌚`.
 3. Add the same three steps: Referrer = `S10`, tag `ref-S10`, Assign To SALES_J.
 4. The **Else** of `Sales link emoji 2` is the real "no sales link" path (step 6).
 

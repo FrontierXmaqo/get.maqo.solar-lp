@@ -29,8 +29,12 @@ mapped from the earlier module.
 **1. `bits`**
 
 ```
-{{replace(replace(replace(message; /[^​‌]/g; emptystring); /​/g; "0"); /‌/g; "1")}}
+{{replace(replace(replace(encodeURL(1.message.message.text); /^.*?((?:%E2%80%8B|%E2%80%8C)+).*$/; "$1"); /%E2%80%8B/g; "0"); /%E2%80%8C/g; "1")}}
 ```
+
+Make's formula editor can't hold the invisible characters inside a regex (it fails with
+"Invalid IML … Unexpected ["), so `encodeURL` first turns them into plain text: U+200B becomes
+`%E2%80%8B` and U+200C becomes `%E2%80%8C`.
 
 **2. `key`** (paste as plain text)
 

@@ -54,6 +54,22 @@ API), or if you'd rather not touch the assignment workflow.
    condition in step 4 keeps each contact from getting the comment twice.
 8. **Publish**.
 
+## Lark Base: the Tags column
+
+The website also sends the tag with the lead, so Lark Base has it from the start:
+
+- Leads submitted on the referral page (`/referral/?r=CODE`) with a valid code arrive with
+  `tags` = `Source-Referral` in the lead webhook, next to `ref_code` and `ref_id`.
+- Every other lead (home page, contact page, no code or an unknown code) has `tags` empty.
+
+One-time setup in Lark:
+
+1. In the leads table, add a field named `Tags` (type **Text**, or **Single option** with the
+   option `Source-Referral`).
+2. Open the Lark automation (or Make step) that creates the row from the webhook and map the
+   payload's `tags` to the new `Tags` field.
+3. Run the test below and check the new row's **Tags** shows `Source-Referral`.
+
 ## Test
 
 1. In a private browser window, open
@@ -62,6 +78,7 @@ API), or if you'd rather not touch the assignment workflow.
 3. In respond.io, once the contact is assigned to Frontierx Maqo (T00):
    - The conversation shows the internal comment, starting with "📌 Referral Lead".
    - The contact has the `Source-Referral` tag.
+   - The Lark Base row has **Tags** = `Source-Referral`.
 4. Option B only: reassign the contact to someone else. No second comment should appear.
 5. Delete the test contact afterwards.
 

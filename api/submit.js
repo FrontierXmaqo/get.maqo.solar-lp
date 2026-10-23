@@ -439,8 +439,8 @@ export default async function handler(req, res) {
   if (kind === 'resi') {
     const refCode = String(body.refCode || '').toUpperCase();
     payload.ref_code = salespeople.some((p) => p.code === refCode) ? refCode : '';
-    // Referral landing page (/referral/) leads with a valid code get this tag for the Lark Base "Tags" column.
-    if (payload.ref_code && new URL(common.landingPageSource || 'https://x/').pathname.startsWith('/referral/')) payload.tags = 'Source-Referral';
+    // Sales-link leads (a valid code) get this tag for the Lark Base "Tags" column.
+    if (payload.ref_code) payload.tags = 'Source-Referral';
   }
 
   const webhookOk = await forwardToWebhook(envVar, payload);

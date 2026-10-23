@@ -58,9 +58,9 @@ API), or if you'd rather not touch the assignment workflow.
 
 The website also sends the tag with the lead, so Lark Base has it from the start:
 
-- Leads submitted on the referral page (`/referral/?r=CODE`) with a valid code arrive with
+- Leads from a sales link (`/?r=CODE`, home or contact page) with a valid code arrive with
   `tags` = `Source-Referral` in the lead webhook, next to `ref_code` and `ref_id`.
-- Every other lead (home page, contact page, no code or an unknown code) has `tags` empty.
+- Every other lead (no code or an unknown code) has `tags` empty.
 
 One-time setup in Lark:
 
@@ -73,7 +73,8 @@ One-time setup in Lark:
 ## Test
 
 1. In a private browser window, open
-   `https://get-maqo-solar-lp-test-716yt7n1s-frontierx-8247.vercel.app/referral/?r=T00&test_webhook=1`.
+   `<latest preview>/?r=T00&test_webhook=1`. The hero should read "You've Been Referred to MAQO
+   Solar!" with Frontierx Maqo's name in the line below.
 2. Fill in the form with a test name and phone number, and submit.
 3. In respond.io, once the contact is assigned to Frontierx Maqo (T00):
    - The conversation shows the internal comment, starting with "📌 Referral Lead".
@@ -84,10 +85,5 @@ One-time setup in Lark:
 
 ## Notes
 
-- **Home-page sales links.** A customer who opens the home page with `/?r=S01` also gets a
-  referral code. Either option above treats them as a referral lead too, so they get the same
-  comment, which says they came through the Referral Landing Page. If you need to tell the two
-  apart, the Lark row's landing page shows `/referral/` for the referral page.
-- **WhatsApp.** The referral page shows a thank-you message after submit and doesn't open
-  WhatsApp. If your assignment only runs when the customer messages first (Conversation Opened),
-  tell the developer, so the page can open WhatsApp after submit like the home-page form does.
+- **The referral landing page is the home page.** `/?r=CODE` shows the referral headline and
+  the salesperson's name, and its form opens WhatsApp after submit as before.

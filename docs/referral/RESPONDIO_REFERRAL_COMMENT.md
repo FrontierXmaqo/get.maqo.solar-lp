@@ -57,7 +57,7 @@ API), or if you'd rather not touch the assignment workflow.
 ## Test
 
 1. In a private browser window, open
-   `https://get-maqo-solar-lp-test-g31f6s8di-frontierx-8247.vercel.app/referral/?r=T00&test_webhook=1`.
+   `https://get-maqo-solar-lp-test-716yt7n1s-frontierx-8247.vercel.app/referral/?r=T00&test_webhook=1`.
 2. Fill in the form with a test name and phone number, and submit.
 3. In respond.io, once the contact is assigned to Frontierx Maqo (T00):
    - The conversation shows the internal comment, starting with "📌 Referral Lead".

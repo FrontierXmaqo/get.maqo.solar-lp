@@ -1,6 +1,6 @@
 // Residential sales links (?r=S02): the salesperson's code is kept for 30 days and sent with
 // the form (refCode), so the Lark row gets its Ref Code. Loaded only by the residential pages;
-// restore.js reads window.__maqoRef.code.
+// restore.js reads window.__maqoRef.code; the referral page also shows .name (event "maqoref").
 (function () {
   var KEY = 'maqo_ref';
   var TTL_MS = 30 * 86400000;
@@ -22,6 +22,7 @@
       if (!person) return;
       try { localStorage.setItem(KEY, JSON.stringify({ code: person.code, at: Date.now() })); } catch (e) { /* this page still has it */ }
     }
-    window.__maqoRef = { code: person.code };
+    window.__maqoRef = { code: person.code, name: person.display_name || '' };
+    window.dispatchEvent(new Event('maqoref'));
   }).catch(function () { /* no config: no Ref Code */ });
 })();

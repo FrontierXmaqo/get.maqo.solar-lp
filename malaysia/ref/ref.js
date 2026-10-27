@@ -19,13 +19,14 @@
     var person = saved && find(saved.code);
     if (!person) {
       person = find(wanted);
-      if (!person) return;
+      if (!person) { window.__maqoRefDone = true; window.dispatchEvent(new Event('maqorefnone')); return; }
       try { localStorage.setItem(KEY, JSON.stringify({ code: person.code, at: Date.now() })); } catch (e) { /* this page still has it */ }
     }
     window.__maqoRef = { code: person.code, name: person.display_name || '' };
+    window.__maqoRefDone = true;
     window.dispatchEvent(new Event('maqoref'));
     referralHero(window.__maqoRef.name);
-  }).catch(function () { /* no config: no Ref Code */ });
+  }).catch(function () { /* no config: no Ref Code */ window.__maqoRefDone = true; window.dispatchEvent(new Event('maqorefnone')); });
 
   // Home page hero for sales-link visitors: the referral headline and the salesperson's name.
   // Matched by the snapshot's own text, so other pages (no such headings) are left alone.

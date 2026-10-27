@@ -23,10 +23,11 @@
     if (fresh) {
       try { localStorage.setItem(KEY, JSON.stringify({ code: person.code, at: Date.now() })); } catch (e) { /* this page still has it */ }
     }
-    window.__maqoRef = { code: person.code, name: person.display_name || '' };
+    // fromUrl: this page was opened from a sales link. Only then does the page show the referral design.
+    window.__maqoRef = { code: person.code, name: person.display_name || '', fromUrl: !!fresh };
     window.__maqoRefDone = true;
     window.dispatchEvent(new Event('maqoref'));
-    referralHero(window.__maqoRef.name);
+    if (fresh) referralHero(window.__maqoRef.name);
   }).catch(function () { /* no config: no Ref Code */ window.__maqoRefDone = true; window.dispatchEvent(new Event('maqorefnone')); });
 
   // Home page hero for sales-link visitors: the referral headline and the salesperson's name.

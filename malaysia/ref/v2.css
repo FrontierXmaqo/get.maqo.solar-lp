@@ -34,7 +34,12 @@ html.ref-v2 #v2 { display: block; width: 100%; color: #16201a; background: #fff;
 .v2-pill small { display: block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; color: #0c842b; line-height: 1.2; }
 .v2-pill strong { display: block; font-size: 16px; line-height: 1.25; }
 .v2-h1 { margin: 22px 0 0; font: 800 clamp(36px, 5vw, 60px)/1.04 'Outfit', 'Noto Sans SC', sans-serif; letter-spacing: -0.025em; text-wrap: balance; color: #16201a; }
-.v2-nm { color: #0c842b; }
+.v2-nm { color: #0c842b; position: relative; display: inline-block; padding-bottom: 0.08em; }
+/* Moving underline: draws in under the name, then an orange light keeps running along it. */
+.v2-nm::after { content: ""; position: absolute; left: 0; right: 0; bottom: -0.04em; height: 0.12em; border-radius: 999px; background: linear-gradient(90deg, transparent 0%, transparent 35%, #ffb347 45%, #ff6a13 50%, #ffb347 55%, transparent 65%, transparent 100%) 0 0 / 250% 100% no-repeat, #c9f0cf; background-position: 120% 0, 0 0; transform-origin: left; transform: scaleX(0); animation: v2-draw 0.8s 0.3s cubic-bezier(.6,.1,.2,1) forwards, v2-run 2.4s 1.1s ease-in-out infinite; }
+@keyframes v2-draw { to { transform: scaleX(1); } }
+@keyframes v2-run { from { background-position: 120% 0, 0 0; } to { background-position: -20% 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .v2-nm::after { animation: none; transform: scaleX(1); } }
 .v2-sub { margin: 18px 0 0; max-width: 32em; font-size: clamp(17px, 1.7vw, 19px); color: #4c5a52; }
 .v2-ctas { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 12px; }
 .v2-facts { margin: 36px 0 0; padding: 22px 0 0; border-top: 1px solid #e3e9e4; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }

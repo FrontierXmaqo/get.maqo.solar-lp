@@ -1,4 +1,4 @@
-// Residential sales links (?r=S02): the salesperson's code is kept for 30 days and sent with
+// Residential sales links (?r=S02): the salesperson's code (latest link opened) is kept for 30 days and sent with
 // the form (refCode), so the Lark row gets its Ref Code. Loaded only by the residential pages;
 // restore.js reads window.__maqoRef.code; the home page hero shows .name (referralHero below).
 (function () {
@@ -15,11 +15,12 @@
     var find = function (code) {
       return code && people.filter(function (p) { return p.code.toUpperCase() === String(code).toUpperCase(); })[0];
     };
-    // First valid code wins: an unexpired stored code is never replaced by a newer link.
-    var person = saved && find(saved.code);
-    if (!person) {
-      person = find(wanted);
-      if (!person) { window.__maqoRefDone = true; window.dispatchEvent(new Event('maqorefnone')); return; }
+    // Last link wins: a valid ?r= code replaces the stored one, so the lead goes to the salesperson
+    // whose link the visitor opened last. With no code in the URL, the stored one (30 days) is used.
+    var fresh = find(wanted);
+    var person = fresh || (saved && find(saved.code));
+    if (!person) { window.__maqoRefDone = true; window.dispatchEvent(new Event('maqorefnone')); return; }
+    if (fresh) {
       try { localStorage.setItem(KEY, JSON.stringify({ code: person.code, at: Date.now() })); } catch (e) { /* this page still has it */ }
     }
     window.__maqoRef = { code: person.code, name: person.display_name || '' };

@@ -2,9 +2,9 @@
 
 > **Superseded.** The emoji pair is no longer added to WhatsApp messages. Routing now uses the Ref Code (`ref_code`) saved in Lark, and the chat is matched to the Lark row by the hidden ref id in the WhatsApp message (see `MAKE_REF_ID.md`). Kept for reference only.
 
-`<preview>` is the branch preview URL. Use a **private/incognito window for every code**: the
-first valid code is kept for 30 days in the browser, so a second code in the same window won't
-change anything (by design).
+`<preview>` is the branch preview URL. The browser keeps the code of the latest link opened for
+30 days, so opening `?r=S03` after `?r=S01` in the same window switches to S03. A page opened
+without `?r=` keeps using the stored code.
 
 To see a link's message without opening WhatsApp: right-click it → **Copy link address**, then
 paste it into the address bar of another tab. Or open DevTools → Console and run:

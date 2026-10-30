@@ -386,7 +386,9 @@ export default async function handler(req, res) {
     sourcePage: SOURCE_PAGE[kind],
     landingPageSource: getLandingPageSource(req, body.landingPageSource),
     // From the form's hidden fields, else the partner link the visitor arrived on (restore.js keeps it).
-    salespartner: v[F.salespartner] || clean(partnerLink.salespartner),
+    // The salesman the visitor picked on the form wins; only a name in salespeople.json is passed on.
+    salespartner: (salespeople.some((p) => p.display_name === body.salesman) && body.salesman)
+      || v[F.salespartner] || clean(partnerLink.salespartner),
     maqo: v[F.maqo] || clean(partnerLink.maqo),
     referer: v[F.referer] || clean(partnerLink.referer),
     remarks: '',

@@ -511,6 +511,11 @@ var partner = (function () {
     '.restore-terms label,.restore-terms span{font-size:14px!important;line-height:1.5!important;font-weight:400!important}' +
     '.restore-terms input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:#40b344}' +
     '.restore-terms a{color:inherit;text-decoration:underline}' +
+    '.restore-salesman{margin:10px 0}.restore-salesman fieldset{border:0;margin:0;padding:0}' +
+    '.restore-salesman label{display:inline-flex;gap:6px;align-items:center;margin:0 18px 0 0;font-weight:400;cursor:pointer}' +
+    '.restore-salesman input{width:18px;height:18px;margin:0;accent-color:#40b344}' +
+    '.restore-salesman select{width:100%;margin-top:6px;height:48px;padding:0 12px;border:1px solid #acacac!important;border-radius:5px;background-color:#fff!important;color:#2c3345;font-size:14px;line-height:normal}.restore-salesman [hidden]{display:none!important}' +
+    '.restore-salesman legend{font:500 16px Inter,sans-serif;color:#2c3345;margin-bottom:6px;padding:0;border:0;width:auto}' +
     '.restore-honeypot{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden}' +
     '.restore-turnstile{display:flex;justify-content:center;margin:10px 0}' +
     '.iti--flag-fixed .iti__flag-container,.iti--flag-fixed .iti__flag-container:hover{cursor:default}' +
@@ -873,6 +878,32 @@ var partner = (function () {
     termsBox.addEventListener('change', function () { showError(terms, ''); });
     submitBox.parentNode.insertBefore(terms, submitBox);
 
+    // "Were you referred by a salesman?" (forms with salesmanQuestion in #form-meta). No, the default,
+    // leaves the form as before; Yes asks for the name, which api/submit.js sends as the salespartner.
+    var salesman = null, salesmanYes = null, salesmanPick = null;
+    if (meta.salesmanQuestion) {
+      salesman = document.createElement('div');
+      salesman.className = 'restore-salesman';
+      salesman.innerHTML = '<fieldset><legend class="label-alignment field-label">Were you referred by any salesman? <span>*</span></legend>' +
+        '<label><input type="radio" name="referred" value="no" checked> No</label>' +
+        '<label><input type="radio" name="referred" value="yes"> Yes</label></fieldset>' +
+        '<div class="flex-col" hidden><label class="label-alignment field-label" for="salesman-' + root.id + '">Salesman <span>*</span></label>' +
+        '<select class="form-control" id="salesman-' + root.id + '"><option value="">Select your salesman</option></select></div>';
+      salesmanYes = salesman.querySelector('input[value=yes]');
+      salesmanPick = salesman.querySelector('select');
+      salesman.addEventListener('change', function () {
+        salesmanPick.parentNode.hidden = !salesmanYes.checked;
+        showError(salesman, '');
+      });
+      fetch('/malaysia/ref/salespeople.json').then(function (res) { return res.json(); }).then(function (people) {
+        people.forEach(function (p) {
+          if (!/^S/.test(p.code)) return; // T00 is the test account
+          salesmanPick.add(new Option(p.display_name, p.display_name));
+        });
+      });
+      submitBox.parentNode.insertBefore(salesman, terms);
+    }
+
     // WhatsApp forms: a live preview of the message under the button.
     if (meta.whatsapp) {
       var note = document.createElement('p');
@@ -943,6 +974,11 @@ var partner = (function () {
         if (message && !firstBad) firstBad = wrapper;
       });
 
+      if (salesman) {
+        var noSalesman = salesmanYes.checked && !salesmanPick.value;
+        showError(salesman, noSalesman ? 'Please select your salesman.' : '');
+        if (noSalesman && !firstBad) firstBad = salesman;
+      }
       showError(terms, termsBox.checked ? '' : 'Please tick the box to agree to the Terms & Conditions.');
       if (!termsBox.checked && !firstBad) firstBad = terms;
 
@@ -978,6 +1014,7 @@ var partner = (function () {
             refId: refId,
             partner: partner.all(),
             refCode: (window.__maqoRef || {}).code || '',
+            salesman: salesman && salesmanYes.checked ? salesmanPick.value : '',
             landingPageSource: location.origin + location.pathname,
             phoneCountry: (function () {
               for (var id in getters) if (getters[id].country) return getters[id].country();

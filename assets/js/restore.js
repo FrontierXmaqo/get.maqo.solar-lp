@@ -568,8 +568,9 @@ var partner = (function () {
     }).join('');
   }
 
-  // The prefilled WhatsApp message: the visible fields as "Label: value" lines, the ref id hidden in "Hi".
-  function whatsappText(meta, values, refId) {
+  // The prefilled WhatsApp message: the visible fields as "Label: value" lines, the ref id hidden in "Hi",
+  // and "Referred by: <name>" last when the client picked a salesman, so respond.io's AI Agent can assign the chat.
+  function whatsappText(meta, values, refId, salesman) {
     var lines = [];
     lines.push('Hi' + hiddenRef(refId) + " Maqo Solar, I'd like a free solar quotation. My details:");
     meta.fields.forEach(function (f) {
@@ -578,6 +579,7 @@ var partner = (function () {
       v = Array.isArray(v) ? v.join(', ') : v;
       lines.push(f.label.replace(/\s*\(.*\)$/, '') + ': ' + (v || '-'));
     });
+    if (salesman) lines.push('Referred by: ' + salesman);
     return lines.join('\n');
   }
 
@@ -897,12 +899,13 @@ var partner = (function () {
       });
       fetch('/malaysia/ref/salespeople.json').then(function (res) { return res.json(); }).then(function (people) {
         people.forEach(function (p) {
-          if (!/^S/.test(p.code)) return; // T00 is the test account
+          if (!/^S/.test(p.code) && !/\.vercel\.app$/.test(location.hostname)) return; // T00, the test account, only on test sites
           salesmanPick.add(new Option(p.display_name, p.display_name));
         });
       });
       submitBox.parentNode.insertBefore(salesman, terms);
     }
+    function pickedSalesman() { return salesman && salesmanYes.checked ? salesmanPick.value : ''; }
 
     // WhatsApp forms: a live preview of the message under the button.
     if (meta.whatsapp) {
@@ -919,7 +922,7 @@ var partner = (function () {
         setTimeout(function () { // after the dropdown or input has taken the new value
           var values = {};
           for (var id in getters) values[id] = getters[id]();
-          preview.querySelector('pre').textContent = whatsappText(meta, values, refId);
+          preview.querySelector('pre').textContent = whatsappText(meta, values, refId, pickedSalesman());
         });
       };
       ['input', 'change', 'mousedown', 'keydown'].forEach(function (t) { root.addEventListener(t, refresh); });
@@ -996,7 +999,7 @@ var partner = (function () {
       // It opens even if saving failed, so the visitor can still reach us there.
       var toWhatsapp = function () {
         var ref = refId;
-        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values, ref)); };
+        var go = function () { location.href = 'https://wa.me/' + meta.whatsapp + '?text=' + encodeURIComponent(whatsappText(meta, values, ref, pickedSalesman())); };
         // Report the Lead before leaving, but never hold the visitor more than a second.
         Promise.race([window.__maqoTrackLead(root.id, attr.fbEventId), new Promise(function (r) { setTimeout(r, 1000); })]).then(go, go);
       };
@@ -1013,8 +1016,7 @@ var partner = (function () {
             attribution: attr,
             refId: refId,
             partner: partner.all(),
-            refCode: (window.__maqoRef || {}).code || '',
-            salesman: salesman && salesmanYes.checked ? salesmanPick.value : '',
+            salesman: pickedSalesman(),
             landingPageSource: location.origin + location.pathname,
             phoneCountry: (function () {
               for (var id in getters) if (getters[id].country) return getters[id].country();

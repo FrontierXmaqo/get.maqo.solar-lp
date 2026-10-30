@@ -437,11 +437,10 @@ export default async function handler(req, res) {
   const refId = /^MQ-[A-HJ-NP-Z2-9]{6}$/.test(body.refId) ? body.refId : newRefId();
   payload.ref_id = refId;
   payload.lead_status = 'Empty Lead';
-  // Residential sales-link code (malaysia/ref/ref.js); only a code in the config is passed on.
+  // The salesman picked on the form ("Referred by"): their code goes to Lark's Ref Code, and the lead gets
+  // the Source-Referral tag for the Lark Base "Tags" column.
   if (kind === 'resi') {
-    const refCode = String(body.refCode || '').toUpperCase();
-    payload.ref_code = salespeople.some((p) => p.code === refCode) ? refCode : '';
-    // Sales-link leads (a valid code) get this tag for the Lark Base "Tags" column.
+    payload.ref_code = (salespeople.find((p) => p.display_name === body.salesman) || {}).code || '';
     if (payload.ref_code) payload.tags = 'Source-Referral';
   }
 

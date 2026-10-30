@@ -61,7 +61,7 @@ Then search the Lark table for `ref_id` = `{{ref_id}}`, as the scenario did befo
 
 ## Test it end to end
 
-1. Open `<preview>/?r=T00` in an incognito window, fill in the form and submit.
+1. Open `<preview>/` in an incognito window, fill in the form (Referred by: Yes, Frontierx Maqo) and submit.
 2. Note the new Lark row's `ref_id`.
 3. Send the WhatsApp message as it is.
 4. In Make's run history, `ref_id` must equal the Lark row's id, and the row must get its

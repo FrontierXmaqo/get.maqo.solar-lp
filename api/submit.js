@@ -9,6 +9,8 @@
 //   CAREER_WEBHOOK_URL    career applications
 //   TESTING_WEBHOOK_URL   every lead goes here instead when the browser has the
 //                         cookie test_webhook=1 (set by visiting ?test_webhook=1)
+//   LARK_STAGE_WEBHOOK_URL  Lark "stage update" workflow; also gets every residential and C&I
+//                         lead, test-mode ones too (is_test: true)
 //   TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret; checks are skipped when unset
 //   SUPABASE_URL          Supabase project URL. With SUPABASE_ANON_KEY, every real lead is
 //   SUPABASE_ANON_KEY     also saved to the landing page CMS tables (atap_leads, ci_leads).
@@ -444,7 +446,13 @@ export default async function handler(req, res) {
     if (payload.ref_code) payload.tags = 'Source-Referral';
   }
 
-  const webhookOk = await forwardToWebhook(envVar, payload);
+  // The Lark stage-update workflow also gets every lead; its result doesn't decide the response.
+  const [webhookOk] = await Promise.all([
+    forwardToWebhook(envVar, payload),
+    kind !== 'career' && process.env.LARK_STAGE_WEBHOOK_URL
+      ? forwardToWebhook('LARK_STAGE_WEBHOOK_URL', { ...payload, is_test: testMode })
+      : null,
+  ]);
 
   // Real leads are also kept in the CMS database, so a failed webhook doesn't lose them.
   // Test-mode leads stay out of it. extra_fields records what the CMS has no column for.

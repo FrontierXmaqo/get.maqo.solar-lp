@@ -9,16 +9,12 @@
 //   CAREER_WEBHOOK_URL    career applications
 //   TESTING_WEBHOOK_URL   every lead goes here instead when the browser has the
 //                         cookie test_webhook=1 (set by visiting ?test_webhook=1)
-//   LARK_STAGE_WEBHOOK_URL  Lark "stage update" workflow; also gets every residential and C&I
-//                         lead, test-mode ones too (is_test: true)
 //   TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret; checks are skipped when unset
 //   SUPABASE_URL          Supabase project URL. With SUPABASE_ANON_KEY, every real lead is
 //   SUPABASE_ANON_KEY     also saved to the landing page CMS tables (atap_leads, ci_leads).
 //                         Those tables let the anon role insert only; staff read them in the CMS.
 
-import { randomInt } from 'node:crypto';
 import forms from './_forms.json' with { type: 'json' };
-import salespeople from '../malaysia/ref/salespeople.json' with { type: 'json' };
 import { buildLeadWebhookPayload, buildCiLeadWebhookPayload, buildCareerWebhookPayload } from './_webhookTemplate.js';
 
 // Which workflow each form belongs to. Forms not listed are residential.
@@ -56,18 +52,6 @@ const F = {
   maqo: '1RB2AqI58o9oUEV6TGAu',
   referer: 'vTUlK7SiiZPHrs4hGfxW',
 };
-
-// "MQ-" plus 6 characters, always a mix of letters and digits; no 0/O/1/I so it reads cleanly in Lark.
-const REF_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-const REF_DIGITS = '23456789';
-function newRefId() {
-  const all = REF_LETTERS + REF_DIGITS;
-  const chars = Array.from({ length: 6 }, () => all[randomInt(all.length)]);
-  const s = chars.join('');
-  if (!/\d/.test(s)) chars[randomInt(6)] = REF_DIGITS[randomInt(REF_DIGITS.length)];
-  else if (!/[A-Z]/.test(s)) chars[randomInt(6)] = REF_LETTERS[randomInt(REF_LETTERS.length)];
-  return 'MQ-' + chars.join('');
-}
 
 const MAX_FIELD_LENGTH = 200;
 const MAX_MESSAGE_LENGTH = 5000;
@@ -388,9 +372,7 @@ export default async function handler(req, res) {
     sourcePage: SOURCE_PAGE[kind],
     landingPageSource: getLandingPageSource(req, body.landingPageSource),
     // From the form's hidden fields, else the partner link the visitor arrived on (restore.js keeps it).
-    // The salesman the visitor picked on the form wins; only a name in salespeople.json is passed on.
-    salespartner: (salespeople.some((p) => p.display_name === body.salesman) && body.salesman)
-      || v[F.salespartner] || clean(partnerLink.salespartner),
+    salespartner: v[F.salespartner] || clean(partnerLink.salespartner),
     maqo: v[F.maqo] || clean(partnerLink.maqo),
     referer: v[F.referer] || clean(partnerLink.referer),
     remarks: '',
@@ -433,26 +415,7 @@ export default async function handler(req, res) {
   const envVar = testMode ? 'TESTING_WEBHOOK_URL' : WEBHOOK_ENV[kind];
   console.log(`Lead (${kind}, ${body.formId}) -> ${envVar}`);
 
-  // Ref id for the Lark row. It goes back to the browser, which puts it in the WhatsApp message so
-  // respond.io can match it. Lark starts the row as "Empty Lead" and it becomes "New Lead" then.
-  // The browser makes the id so it can show it in the WhatsApp preview; a missing or odd one is replaced.
-  const refId = /^MQ-[A-HJ-NP-Z2-9]{6}$/.test(body.refId) ? body.refId : newRefId();
-  payload.ref_id = refId;
-  payload.lead_status = 'Empty Lead';
-  // The salesman picked on the form ("Referred by"): their code goes to Lark's Ref Code, and the lead gets
-  // the Source-Referral tag for the Lark Base "Tags" column.
-  if (kind === 'resi') {
-    payload.ref_code = (salespeople.find((p) => p.display_name === body.salesman) || {}).code || '';
-    if (payload.ref_code) payload.tags = 'Source-Referral';
-  }
-
-  // The Lark stage-update workflow also gets every lead; its result doesn't decide the response.
-  const [webhookOk] = await Promise.all([
-    forwardToWebhook(envVar, payload),
-    kind !== 'career' && process.env.LARK_STAGE_WEBHOOK_URL
-      ? forwardToWebhook('LARK_STAGE_WEBHOOK_URL', { ...payload, is_test: testMode })
-      : null,
-  ]);
+  const webhookOk = await forwardToWebhook(envVar, payload);
 
   // Real leads are also kept in the CMS database, so a failed webhook doesn't lose them.
   // Test-mode leads stay out of it. extra_fields records what the CMS has no column for.
@@ -494,5 +457,5 @@ export default async function handler(req, res) {
   if (!webhookOk && !saved) {
     return res.status(502).json({ error: "We couldn't send your details. Please try again." });
   }
-  return res.status(200).json({ ok: true, refId });
+  return res.status(200).json({ ok: true });
 }

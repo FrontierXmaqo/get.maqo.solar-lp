@@ -29,34 +29,36 @@ header .in{padding-block:12px;display:flex;align-items:center;justify-content:sp
 .newsite{font:600 12px/1 var(--mono);letter-spacing:.06em;color:var(--green-ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:9px 14px}
 .newsite:hover{border-color:var(--orange-deep)}
 
-.hero{position:relative;isolation:isolate;overflow:hidden;color:#fff;
-  background:radial-gradient(38rem 26rem at 86% -8%,rgba(255,140,76,.5),transparent 62%),
-             radial-gradient(48rem 30rem at 6% 110%,rgba(49,172,71,.3),transparent 68%),var(--forest-deep)}
+.hero{position:relative;isolation:isolate;overflow:hidden;color:var(--fg);background:var(--hero-bg)}
 .hero::before{content:"";position:absolute;inset:0;z-index:-1;
-  background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
   background-size:88px 88px;-webkit-mask-image:radial-gradient(70% 78% at 14% 24%,#000,transparent 72%);mask-image:radial-gradient(70% 78% at 14% 24%,#000,transparent 72%)}
 .hero .in{padding-block:clamp(40px,8vh,80px);display:grid;gap:clamp(18px,2.4vh,24px)}
-.eyebrow{display:flex;align-items:center;gap:10px;margin:0;font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.16em;color:rgba(255,255,255,.75)}
+.eyebrow{display:flex;align-items:center;gap:10px;margin:0;font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.16em;color:var(--muted)}
 .eyebrow::before{content:"";width:28px;height:2px;background:var(--orange-deep)}
-h1{margin:0;font-weight:700;font-size:clamp(2.25rem,6vw,4.25rem);line-height:1.03;letter-spacing:-.04em;text-wrap:balance;text-shadow:0 2px 28px rgba(6,26,14,.45);max-width:15ch}
-.hl{display:inline-block;padding-inline:.06em;background-image:linear-gradient(transparent 36%,rgba(249,112,0,.62) 36% 88%,transparent 88%)}
-.lede{margin:0;max-width:46ch;font-size:clamp(.9375rem,1.4vw,1.0625rem);color:rgba(255,255,255,.85)}
+h1{margin:0;font-weight:700;font-size:clamp(2.25rem,6vw,4.25rem);line-height:1.03;letter-spacing:-.04em;text-wrap:balance;text-shadow:var(--shadow);max-width:15ch}
+.hl{display:inline-block;padding-inline:.06em;background-image:linear-gradient(transparent 36%,var(--hl) 36% 88%,transparent 88%)}
+.lede{margin:0;max-width:46ch;font-size:clamp(.9375rem,1.4vw,1.0625rem);color:var(--soft)}
 
 .road{width:100%;max-width:640px;height:auto;display:block;fill:none;stroke-linecap:round;stroke-linejoin:round}
-.road .ground{stroke:rgba(255,255,255,.3);stroke-width:2}
-.road .body{stroke:#fff;stroke-width:2.5}
-.road .pv{stroke:var(--orange);stroke-width:2.5}
-.road .wheel{fill:var(--forest-deep)}
+.road .ground{stroke:var(--road);stroke-width:2}
+.road .body{stroke:var(--truck);stroke-width:2.5}
+.road .pv{stroke:var(--panel-line);stroke-width:2.5}
+.road .wheel{fill:var(--wheel)}
 
 .actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
 .cta{display:inline-flex;align-items:center;gap:8px;background:var(--orange-deep);color:#fff;text-decoration:none;
   font:600 15px/1 var(--sans);padding:16px 26px;border-radius:999px;box-shadow:0 10px 24px -6px rgba(249,112,0,.45);transition:filter .2s}
 .cta:hover{filter:brightness(.95)}
-.timer{font-size:14px;color:rgba(255,255,255,.75);font-variant-numeric:tabular-nums}
-.stay{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.4);padding:0 0 2px;color:#fff;font:600 14px var(--sans);cursor:pointer}
-.stay:hover{color:var(--orange);border-color:var(--orange)}
-.note{margin:0;font-size:14px;color:rgba(255,255,255,.7)}
-.note code{font:500 13px var(--mono);color:#fff}
+.timer{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stay{background:none;border:0;border-bottom:1px solid currentColor;padding:0 0 2px;color:var(--fg);font:600 14px var(--sans);cursor:pointer}
+.stay:hover{color:var(--orange-deep)}
+.note{margin:0;font-size:14px;color:var(--muted)}
+.note code{font:500 13px var(--mono);color:var(--fg)}
+
+/* Background: white with a soft orange and green glow */
+.bg-glow{--hero-bg:radial-gradient(38rem 26rem at 86% -8%,rgba(255,140,76,.32),transparent 62%),radial-gradient(48rem 30rem at 6% 110%,rgba(49,172,71,.22),transparent 68%),#fff;
+  --fg:#1a1a1a;--soft:#3d4842;--muted:#5b6660;--grid:rgba(12,132,43,.06);--road:#cfd8d2;--truck:#1a1a1a;--panel-line:#f97000;--wheel:#fff;--hl:rgba(249,112,0,.38);--shadow:none}
 
 .more .in{padding-block:40px;display:grid;gap:28px}
 .offer{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
@@ -70,6 +72,16 @@ footer .in{padding-block:20px}
 .cta:focus-visible,.stay:focus-visible,.newsite:focus-visible,.logo:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
 @media (max-width:760px){.offer{grid-template-columns:1fr 1fr}}
 @media (max-width:420px){.offer{grid-template-columns:1fr}.newsite{display:none}}
+
+/* Everything centred */
+header .in{justify-content:center}
+.hero .in{justify-items:center;text-align:center}
+.eyebrow::after{content:"";width:28px;height:2px;background:var(--orange-deep)}
+h1,.lede{margin-inline:auto}
+.actions{justify-content:center}
+.offer div{text-align:center}
+.creds{justify-content:center}
+footer .in{text-align:center}
 </style>
 
 </head>
@@ -77,11 +89,10 @@ footer .in{padding-block:20px}
 <header>
   <div class="in">
     <a class="logo" href="https://get.maqo.asia"><img src="/assets/img/044cb7c6c078.webp" alt="MAQO, Energizing A Cleaner Future" width="1200" height="263"></a>
-    <a class="newsite" href="https://get.maqo.asia">get.maqo.asia</a>
   </div>
 </header>
 
-<section class="hero">
+<section class="hero bg-glow" id="hero">
   <div class="in">
     <p class="eyebrow">We've moved</p>
     <h1>Maqo Solar now lives at <span class="hl">get.maqo.asia</span></h1>

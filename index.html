@@ -78,7 +78,12 @@ header .in{justify-content:center}
 .hero .in{justify-items:center;text-align:center}
 .eyebrow::after{content:"";width:28px;height:2px;background:var(--orange-deep)}
 h1,.lede{margin-inline:auto}
-.actions{justify-content:center}
+.actions{flex-direction:column;align-items:center}
+.cta{font-size:clamp(17px,2.2vw,20px);padding:22px 44px;gap:10px}
+a.hl{color:inherit;text-decoration:none}
+a.hl:hover{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
+.note a{text-decoration:underline;text-underline-offset:3px;color:var(--fg)}
+.hl:focus-visible,.note a:focus-visible{outline:2px solid var(--orange-deep);outline-offset:3px}
 .offer div{text-align:center}
 .creds{justify-content:center}
 footer .in{text-align:center}
@@ -95,7 +100,7 @@ footer .in{text-align:center}
 <section class="hero bg-glow" id="hero">
   <div class="in">
     <p class="eyebrow">We've moved</p>
-    <h1>Maqo Solar now lives at <span class="hl">get.maqo.asia</span></h1>
+    <h1>Maqo Solar now lives at <a class="hl" href="https://get.maqo.asia">get.maqo.asia</a></h1>
     <p class="lede">Same Maqorians, same ST Class A standard of work. Our new website brings residential solar, C&amp;I EPC, zero-capex PPA and BESS together in one place.</p>
 
     <svg class="road" viewBox="0 0 600 80" role="img" aria-label="A truck carrying solar panels drives to get.maqo.asia">
@@ -111,9 +116,9 @@ footer .in{text-align:center}
 
     <div class="actions">
       <a id="go" class="cta" href="https://get.maqo.asia" rel="noopener">Continue to get.maqo.asia <span aria-hidden="true">→</span></a>
-      <span class="timer" id="timer" aria-live="polite">Taking you there in 8s · <button class="stay" id="stay" type="button">Stay on this page</button></span>
+      <span class="timer" id="timer" aria-live="polite">Taking you there in 5s · <button class="stay" id="stay" type="button">Stay on this page</button></span>
     </div>
-    <p class="note">Please update your bookmarks to <code>get.maqo.asia</code>. Old links still work: we send you to the matching page on the new site.</p>
+    <p class="note">Please update your bookmarks to <a href="https://get.maqo.asia"><code>get.maqo.asia</code></a>. Old links still work: we send you to the matching page on the new site.</p>
   </div>
 </section>
 
@@ -135,7 +140,7 @@ footer .in{text-align:center}
 
 <script>
 (() => {
-  const SECONDS = 8;
+  const SECONDS = 5;
   const live = /(^|\.)maqosolar\.com$/.test(location.hostname); // only redirect on the real domain, not in previews
   const target = 'https://get.maqo.asia' + (live ? location.pathname + location.search + location.hash : '');
   const go = document.getElementById('go'), timer = document.getElementById('timer'), truck = document.getElementById('truck');

@@ -118,20 +118,6 @@
           "Three Phase",
           "Unsure"
         ]
-      },
-      {
-        "id": "Co4aUJUAz3RJ017uwDWg",
-        "key": "contact.preferred_communication_language_2",
-        "label": "Preferred Communication Language",
-        "type": "single_options",
-        "required": true,
-        "hidden": false,
-        "query": "single_dropdown_24qfy",
-        "options": [
-          "English",
-          "Chinese",
-          "Malay"
-        ]
       }
     ]
   },
@@ -253,20 +239,6 @@
           "Single Phase",
           "Three Phase",
           "Unsure"
-        ]
-      },
-      {
-        "id": "Co4aUJUAz3RJ017uwDWg",
-        "key": "contact.preferred_communication_language_2",
-        "label": "Preferred Communication Language",
-        "type": "single_options",
-        "required": true,
-        "hidden": false,
-        "query": "single_dropdown_24qfy",
-        "options": [
-          "English",
-          "Chinese",
-          "Malay"
         ]
       }
     ]
